@@ -2,6 +2,7 @@ package dto;
 
 import com.hankcs.hanlp.dictionary.DynamicCustomDictionary;
 import com.hankcs.hanlp.dictionary.CustomDictionary;
+import com.hankcs.hanlp.dictionary.CoreDictionary;
 import com.hankcs.hanlp.seg.Viterbi.ViterbiSegment;
 import com.hankcs.hanlp.seg.common.Term;
 import filterdocid.DocumentSimpleInfo;
@@ -77,7 +78,7 @@ public class GetDefaultSqlDictionary {
      * 从数据库加载自定义词典
      */
     private static Keymapper loadCustomWordsFromDatabase() {
-//        DynamicCustomDictionary customDict = new DynamicCustomDictionary();
+        DynamicCustomDictionary dynamicCustomDictionary = new DynamicCustomDictionary();
         List<String> FileNames = new ArrayList<>();
 
         // 从数据库中读取Tag标签中的文件名称
@@ -88,18 +89,15 @@ public class GetDefaultSqlDictionary {
                 String filenamelower = convertToLowerCase(fileName);
                 filenamelower = filenamelower.trim();
                 FileNames.add(filenamelower);
-                CustomDictionary.add(filenamelower);
-//                customDict.add(filenamelower);
-
+                dynamicCustomDictionary.add(filenamelower,"nz 1024");
             }
         }
 
         ViterbiSegment viterbi = new ViterbiSegment();
-//        viterbi.enableCustomDictionary(customDict);
+        viterbi.customDictionary = dynamicCustomDictionary;
         viterbi.enableCustomDictionary(true);
         viterbi.enableCustomDictionaryForcing(true);
         return new Keymapper(viterbi, FileNames);
-
     }
 
     // 将输入字符串转换为小写
@@ -109,7 +107,7 @@ public class GetDefaultSqlDictionary {
     }
     // 保留 main 用于测试
     public static void main(String[] args) {
-        String text = "231aw产品手册的电源要求是什么？";
+        String text = "sc231aw产品手册的电源要求是什么？";
         String lowerText = convertToLowerCase(text);
         List<Term> matchedTerms = extractMetricTerms(lowerText);
 
