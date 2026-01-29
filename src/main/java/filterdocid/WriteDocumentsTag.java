@@ -7,7 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.util.*;
 
-public class CreateDocumentsInfo {
+public class WriteDocumentsTag {
 
     /** kb_id 列表 */
     private List<String> kbIds = Arrays.asList(
@@ -31,23 +31,23 @@ public class CreateDocumentsInfo {
      */
     private List<Tag> kb_ids_all_tag = new ArrayList<>();
 
-    public CreateDocumentsInfo() {
+    public WriteDocumentsTag() {
         initData();
     }
 
     /** 初始化数据 */
     private void initData() {
         Map<String, Tag> kb1Docs = new HashMap<>();
-        kb1Docs.put("756063966790811656",
-                new Tag("sc231aw", "PLC中文文档", "2025-01-10 10:30:00","756063966790811656"));
-        kb1Docs.put("756063966790811655",
-                new Tag("sc231ad", "PLC中文文档", "2025-01-11 14:20:00","756063966790811655"));
+        kb1Docs.put("756063966790811650",
+                new Tag("235aw", "PLC中文文档", "2025-01-10 10:30:00","756063966790811650"));
+        kb1Docs.put("756063966790811651",
+                new Tag("235BD", "PLC中文文档", "2025-01-11 14:20:00","756063966790811651"));
 
         kbDocTagMap.put("571776832787972098", kb1Docs);
 
         Map<String, Tag> kb2Docs = new HashMap<>();
-        kb2Docs.put("756063966790811657",
-                new Tag("sc231ew", "PLC中文文档", "2025-01-12 09:00:00","756063966790811657"));
+        kb2Docs.put("756063966790811652",
+                new Tag("235BW", "PLC中文文档", "2025-01-12 09:00:00","756063966790811657"));
 
         kbDocTagMap.put("571776832787972097", kb2Docs);
     }
@@ -110,7 +110,7 @@ public class CreateDocumentsInfo {
 
 
     public static void main(String[] args) {
-        CreateDocumentsInfo info = new CreateDocumentsInfo();
+        WriteDocumentsTag info = new WriteDocumentsTag();
 
         List<String> querykbIds = Arrays.asList("571776832787972098","571776832787972097");
 
