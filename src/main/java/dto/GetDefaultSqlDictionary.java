@@ -1,6 +1,7 @@
 package dto;
 
 import com.hankcs.hanlp.dictionary.DynamicCustomDictionary;
+import com.hankcs.hanlp.dictionary.CustomDictionary;
 import com.hankcs.hanlp.seg.Viterbi.ViterbiSegment;
 import com.hankcs.hanlp.seg.common.Term;
 import filterdocid.DocumentSimpleInfo;
@@ -10,7 +11,6 @@ import java.util.*;
 
 public class GetDefaultSqlDictionary {
 
-//    private static volatile Keymapper cachedKeymapper = null;
     private static Keymapper cachedKeymapper;
 
     /**
@@ -77,26 +77,26 @@ public class GetDefaultSqlDictionary {
      * 从数据库加载自定义词典
      */
     private static Keymapper loadCustomWordsFromDatabase() {
-        DynamicCustomDictionary customDict = new DynamicCustomDictionary();
+//        DynamicCustomDictionary customDict = new DynamicCustomDictionary();
         List<String> FileNames = new ArrayList<>();
 
         // 从数据库中读取Tag标签中的文件名称
         List<DocumentSimpleInfo> docList = readDocIdAndFileNameFromDB();
-//        for (DocumentSimpleInfo item : docList) {
-//            System.out.println("doc_id = " + item.getDocId()
-//                    + ", file_name = " + item.getFileName());
-//        }
         for (DocumentSimpleInfo item : docList) {
             String fileName = item.getFileName();
             if (fileName != null && !fileName.trim().isEmpty()) {
-                fileName = fileName.trim();
-                FileNames.add(fileName);
-                customDict.add(fileName, "nz");
+                String filenamelower = convertToLowerCase(fileName);
+                filenamelower = filenamelower.trim();
+                FileNames.add(filenamelower);
+                CustomDictionary.add(filenamelower);
+//                customDict.add(filenamelower);
+
             }
         }
 
         ViterbiSegment viterbi = new ViterbiSegment();
-        viterbi.enableCustomDictionary(customDict);
+//        viterbi.enableCustomDictionary(customDict);
+        viterbi.enableCustomDictionary(true);
         viterbi.enableCustomDictionaryForcing(true);
         return new Keymapper(viterbi, FileNames);
 
