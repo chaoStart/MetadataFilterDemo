@@ -101,7 +101,7 @@ public class WriteDocumentsTag {
             }
 
             ps.executeBatch();
-            System.out.println("数据已成功写入 DocumentTag 表");
+            System.out.println(String.format("数据已成功写入 %d条数据到 DocumentTag 表", tags.size()));
 
         } catch (Exception e) {
             e.printStackTrace();

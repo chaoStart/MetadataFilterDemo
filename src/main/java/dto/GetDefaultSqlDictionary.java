@@ -45,7 +45,7 @@ public class GetDefaultSqlDictionary {
     /**
      * 对外提供的核心方法：输入文本，返回其中命中的数据库指标词（Term 列表）
      */
-    public static List<Term> extractMetricTerms(String text) {
+    public static List<DocumentSimpleInfo>  extractMetricTerms(String text) {
         if (text == null || text.trim().isEmpty()) {
             return Collections.emptyList();
         }
@@ -61,17 +61,28 @@ public class GetDefaultSqlDictionary {
 
         ViterbiSegment segment = cachedKeymapper.getSegment();
         Set<String> FileNamesSet = new HashSet<>(cachedKeymapper.getFileNames());
-
+        List<DocumentSimpleInfo> docLists = cachedKeymapper.getDocList();
         List<Term> termList = segment.seg(text);
         List<Term> matchedTerms = new ArrayList<>();
-
+//        List<String> docIdSet = new ArrayList<>();
+        List<DocumentSimpleInfo>  latestDocLists = new ArrayList<>();
+        // 匹配文件名
         for (Term term : termList) {
             if (FileNamesSet.contains(term.word)) {
                 matchedTerms.add(term);
             }
         }
-
-        return matchedTerms;
+        // 匹配文档doc_id
+        for (DocumentSimpleInfo item:docLists){
+            for ( Term term:matchedTerms){
+                if(item.getFileName().toLowerCase().equals(term.word)){
+//                    docIdSet.add(item.getDocId());
+                    latestDocLists.add(item);
+                }
+            }
+        }
+//        return docIdSet;
+        return latestDocLists;
     }
 
     /**
@@ -97,28 +108,27 @@ public class GetDefaultSqlDictionary {
         viterbi.customDictionary = dynamicCustomDictionary;
         viterbi.enableCustomDictionary(true);
         viterbi.enableCustomDictionaryForcing(true);
-        return new Keymapper(viterbi, FileNames);
+        return new Keymapper(viterbi, FileNames, docList);
     }
 
     // 将输入字符串转换为小写
-
     public static String convertToLowerCase(String text) {
         return text != null ? text.toLowerCase() : null;
     }
     // 保留 main 用于测试
-    public static void main(String[] args) {
-        String text = "sc231aw产品手册的电源要求是什么？";
-        String lowerText = convertToLowerCase(text);
-        List<Term> matchedTerms = extractMetricTerms(lowerText);
-
-        System.out.println("\n=== 在数据库指标词典中成功命中的词 ===");
-        if (matchedTerms.isEmpty()) {
-            System.out.println("（无匹配项）");
-        } else {
-            matchedTerms.forEach(term ->
-                    System.out.println(term.word + "  (offset=" + term.offset + ")")
-            );
-        }
-        System.out.println("--------------------------------");
-    }
+//    public static void main(String[] args) {
+//        String text = "sc235Bw和sc231aw  产品手册的电源要求是什么？";
+//        String lowerText = convertToLowerCase(text);
+//        List<DocumentSimpleInfo> matchedDocIds = extractMetricTerms(lowerText);
+//
+//        System.out.println("\n=== 在数据库指标词典中成功命中的文档id和文档名称 ===");
+//        if (matchedDocIds.isEmpty()) {
+//            System.out.println("（无匹配项）");
+//        } else {
+//            matchedDocIds.forEach(term ->
+//                    System.out.println( "  (docIds=" + term.getDocId() + ", fileName=" + term.getFileName() + ")")
+//            );
+//        }
+//        System.out.println("--------------------------------");
+//    }
 }
