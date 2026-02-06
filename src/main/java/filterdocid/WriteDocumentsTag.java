@@ -205,7 +205,8 @@ public class WriteDocumentsTag {
 
 //        //创建插入标签元数据
         ArrayList<Tag> insertTag = new ArrayList<Tag>();
-        insertTag.add(new Tag("232aw", "PLC中文文档", "2025-01-10 10:30:00", "756063966790811653"));
+//        insertTag.add(new Tag("232AD", "PLC中文文档", "2025-01-10 10:30:00", "756063966790811653"));
+        insertTag.add(new Tag("232Aw", "PLC中文文档", "2025-01-10 10:30:00", "756063966790811650"));
         info.addTag(insertTag);
 //        // 删除标签元数据
 //        ArrayList<Tag> deleteTags = new ArrayList<>();
@@ -213,7 +214,7 @@ public class WriteDocumentsTag {
 //        info.deleteTag(deleteTags);
         // 修改标签元数据
         ArrayList<Tag> updateTags = new ArrayList<>();
-        updateTags.add(new Tag("232Aw", "PLC中文文档", "2025-01-10 10:30:00", "756063966790811653"));
+        updateTags.add(new Tag("232AD", "PLC中文文档", "2025-01-10 10:30:00", "756063966790811653"));
         info.updateTag(updateTags);
     }
 }

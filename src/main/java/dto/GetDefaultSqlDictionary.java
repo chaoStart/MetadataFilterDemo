@@ -1,5 +1,6 @@
 package dto;
 
+import com.hankcs.hanlp.dictionary.CustomDictionary;
 import com.hankcs.hanlp.dictionary.DynamicCustomDictionary;
 import com.hankcs.hanlp.seg.Viterbi.ViterbiSegment;
 import com.hankcs.hanlp.seg.common.Term;
@@ -41,7 +42,7 @@ public class GetDefaultSqlDictionary {
     /**
      * 对外提供的核心方法：输入文本，返回其中命中的数据库指标词（Term 列表）
      */
-    // text是传入的用户问题
+    // text是用户的问题
     public static List<DocumentSimpleInfo>  extractMetricTerms(String text) {
         if (text == null || text.trim().isEmpty()) {
             return Collections.emptyList();
@@ -54,67 +55,48 @@ public class GetDefaultSqlDictionary {
                 return Collections.emptyList();
             }
         }
-        ViterbiSegment segment = cachedKeymapper.getSegment();
-        List<Term> termList = segment.seg(text);
+        Set<String> dict = cachedKeymapper.getFileNames();
         Map<String, DocumentSimpleInfo> fileNameMap = cachedKeymapper.getFileNameMap();
         List<DocumentSimpleInfo>  latestDocLists = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+
         // 匹配文件名称filenames和文档doc_id信息
-        for (Term term : termList) {
-            String word = term.word.toLowerCase();
-            // O(1) 查 Map
-            DocumentSimpleInfo info = fileNameMap.get(word);
-            if (info != null) {
-                latestDocLists.add(info);
+        CustomDictionary.parseText(text, (begin, end, value) -> {
+            String word = text.substring(begin, end);
+            if (dict.contains(word) && seen.add(word)) {
+                DocumentSimpleInfo docInfo = fileNameMap.get(word);
+                if (docInfo != null) {
+                    latestDocLists.add(docInfo);
+                }
             }
-        }
+        });
+
         return latestDocLists;
     }
 
     /**
      * 从数据库加载自定义词典
      */
-/*    private static Keymapper loadCustomWordsFromDatabase() {
-        DynamicCustomDictionary dynamicCustomDictionary = new DynamicCustomDictionary();
-        List<String> FileNames = new ArrayList<>();
-
-        // 从数据库中读取Tag标签中的文件名称
-        List<DocumentSimpleInfo> docList = readDocIdAndFileNameFromDB();
-        for (DocumentSimpleInfo item : docList) {
-            String fileName = item.getFileName();
-            if (fileName != null && !fileName.trim().isEmpty()) {
-                String filenamelower = convertToLowerCase(fileName);
-                filenamelower = filenamelower.trim();
-                FileNames.add(filenamelower);
-                dynamicCustomDictionary.add(filenamelower,"nz 1024");
-            }
-        }
-
-        ViterbiSegment viterbi = new ViterbiSegment();
-        viterbi.customDictionary = dynamicCustomDictionary;
-        viterbi.enableCustomDictionary(true);
-        viterbi.enableCustomDictionaryForcing(true);
-        return new Keymapper(viterbi, FileNames, docList);
-    }*/
     private static Keymapper loadCustomWordsFromDatabase() {
-
         try {
             String mysqlVersion = getMysqlVersion();
             String redisVersion = RedisUtil.get("documentTag:version");
 
             List<DocumentSimpleInfo> docList;
-            List<String> fileNames;
+            Set<String> fileNames;
 
             // Step1 + Step2：判断是否变化
             if (redisVersion != null && redisVersion.equals(mysqlVersion)) {
                 System.out.println("【Redis】使用缓存数据");
                 docList = RedisUtil.getList("documentTag:docList", DocumentSimpleInfo.class);
-                fileNames = RedisUtil.getList("documentTag:fileNames", String.class);
+                fileNames = RedisUtil.getSet("documentTag:fileNames", String.class);
             } else {
                 System.out.println("【MySQL】检测到数据变化，重新加载");
 
                 docList = readDocIdAndFileNameFromDB();
-                fileNames = new ArrayList<>();
+                fileNames = new HashSet<>();
 
+                assert docList != null;
                 for (DocumentSimpleInfo item : docList) {
                     String fn = convertToLowerCase(item.getFileName());
                     if (fn != null && !fn.trim().isEmpty()) {
@@ -128,18 +110,15 @@ public class GetDefaultSqlDictionary {
                 RedisUtil.setObject("documentTag:fileNames", fileNames);
             }
 
-            // 构建 HanLP 词典
-            DynamicCustomDictionary dynamicCustomDictionary = new DynamicCustomDictionary();
+            // 加载自定义 HanLP 词典
+            CustomDictionary  myCustomDictionary = new CustomDictionary();
+            assert fileNames != null;
             for (String name : fileNames) {
-                dynamicCustomDictionary.add(name, "nz 1024");
+                CustomDictionary.add(name, "nz 1024");
             }
 
-            ViterbiSegment viterbi = new ViterbiSegment();
-            viterbi.customDictionary = dynamicCustomDictionary;
-            viterbi.enableCustomDictionary(true);
-            viterbi.enableCustomDictionaryForcing(true);
-
-            return new Keymapper(viterbi, fileNames, docList);
+            assert docList != null;
+            return new Keymapper(myCustomDictionary, fileNames, docList);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -153,7 +132,7 @@ public class GetDefaultSqlDictionary {
     }
     // 保留 main 用于测试
     public static void main(String[] args) {
-        String text = "sc235Bw和sc232aw产品手册的电源要求是什么？";
+        String text = "sc231ad和sc231aw产品手册的电源要求是什么？";
         String lowerText = convertToLowerCase(text);
         List<DocumentSimpleInfo> matchedDocIds = extractMetricTerms(lowerText);
 

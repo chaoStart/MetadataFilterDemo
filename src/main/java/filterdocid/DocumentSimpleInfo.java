@@ -14,7 +14,7 @@ public class DocumentSimpleInfo {
         this.fileName = fileName;
     }
     public void setDocId(String docId) {
-        System.out.println("setDocId 被调用：" + docId);
+//        System.out.println("setDocId 被调用：" + docId);
         this.docId = docId;
     }
 
@@ -23,7 +23,7 @@ public class DocumentSimpleInfo {
     }
 
     public void setFileName(String fileName) {
-        System.out.println("setDocId 被调用：" + fileName);
+//        System.out.println("set fileName 被调用：" + fileName);
         this.fileName = fileName;
     }
 

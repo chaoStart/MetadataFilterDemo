@@ -4,6 +4,7 @@ import redis.clients.jedis.Jedis;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
+import java.util.Set;
 
 public class RedisUtil {
 
@@ -20,6 +21,16 @@ public class RedisUtil {
         try (Jedis jedis = getJedis()) {
             jedis.set(key, value);
         }
+    }
+
+    /**
+     * 存储 Set 类型数据到 Redis
+     * @param key Redis键
+     * @param set 要存储的Set集合
+     */
+    public static <T> void setSet(String key, Set<T> set) throws Exception {
+        String json = mapper.writeValueAsString(set);
+        set(key, json);
     }
 
     public static String get(String key) {
@@ -43,5 +54,18 @@ public class RedisUtil {
         if (json == null) return null;
         return mapper.readValue(json,
                 mapper.getTypeFactory().constructCollectionType(List.class, clazz));
+    }
+
+    /**
+     * 从 Redis 获取 Set 类型数据
+     * @param key Redis键
+     * @param clazz 元素类型
+     * @return Set<T>
+     */
+    public static <T> Set<T> getSet(String key, Class<T> clazz) throws Exception {
+        String json = get(key);
+        if (json == null) return null;
+        return mapper.readValue(json,
+                mapper.getTypeFactory().constructCollectionType(Set.class, clazz));  // ✅ List改为Set
     }
 }
