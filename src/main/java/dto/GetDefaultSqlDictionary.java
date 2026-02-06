@@ -1,8 +1,6 @@
 package dto;
 
 import com.hankcs.hanlp.dictionary.DynamicCustomDictionary;
-import com.hankcs.hanlp.dictionary.CustomDictionary;
-import com.hankcs.hanlp.dictionary.CoreDictionary;
 import com.hankcs.hanlp.seg.Viterbi.ViterbiSegment;
 import com.hankcs.hanlp.seg.common.Term;
 import filterdocid.DocumentSimpleInfo;
@@ -21,20 +19,16 @@ public class GetDefaultSqlDictionary {
      */
     public static List<DocumentSimpleInfo> readDocIdAndFileNameFromDB() {
         List<DocumentSimpleInfo> resultList = new ArrayList<>();
-
         String sql = "SELECT doc_id, file_name FROM DocumentTag";
-
         try (Connection conn = SqlConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-
             while (rs.next()) {
                 String docId = rs.getString("doc_id");
                 String fileName = rs.getString("file_name");
 
                 resultList.add(new DocumentSimpleInfo(docId, fileName));
             }
-
         }  catch (SQLException e) {
             System.err.println("数据库读取失败: " + e.getMessage());
             e.printStackTrace();
@@ -52,7 +46,6 @@ public class GetDefaultSqlDictionary {
         if (text == null || text.trim().isEmpty()) {
             return Collections.emptyList();
         }
-
         // 懒加载 + 简单单例（非严格线程安全，生产环境可加锁或使用更健壮的初始化方式）
         if (cachedKeymapper == null) {
             cachedKeymapper = loadCustomWordsFromDatabase();
@@ -61,25 +54,17 @@ public class GetDefaultSqlDictionary {
                 return Collections.emptyList();
             }
         }
-
         ViterbiSegment segment = cachedKeymapper.getSegment();
-        Set<String> FileNamesSet = new HashSet<>(cachedKeymapper.getFileNames());
-        List<DocumentSimpleInfo> docLists = cachedKeymapper.getDocList();
         List<Term> termList = segment.seg(text);
-        List<Term> matchedTerms = new ArrayList<>();
+        Map<String, DocumentSimpleInfo> fileNameMap = cachedKeymapper.getFileNameMap();
         List<DocumentSimpleInfo>  latestDocLists = new ArrayList<>();
-        // 匹配Tag文件标签名称
+        // 匹配文件名称filenames和文档doc_id信息
         for (Term term : termList) {
-            if (FileNamesSet.contains(term.word)) {
-                matchedTerms.add(term);
-            }
-        }
-        // 匹配文档doc_id
-        for (DocumentSimpleInfo item:docLists){
-            for ( Term term:matchedTerms){
-                if(item.getFileName().toLowerCase().equals(term.word)){
-                    latestDocLists.add(item);
-                }
+            String word = term.word.toLowerCase();
+            // O(1) 查 Map
+            DocumentSimpleInfo info = fileNameMap.get(word);
+            if (info != null) {
+                latestDocLists.add(info);
             }
         }
         return latestDocLists;
