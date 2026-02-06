@@ -63,26 +63,35 @@ public class GetDefaultSqlDictionary {
         }
 
         ViterbiSegment segment = cachedKeymapper.getSegment();
-        Set<String> FileNamesSet = new HashSet<>(cachedKeymapper.getFileNames());
-        List<DocumentSimpleInfo> docLists = cachedKeymapper.getDocList();
+        Set<String> fileNamesSet = new HashSet<>(cachedKeymapper.getFileNames());
+
+        // Step1: HanLP分词，提取匹配自定义词典的词
         List<Term> termList = segment.seg(text);
-        List<Term> matchedTerms = new ArrayList<>();
-        List<DocumentSimpleInfo>  latestDocLists = new ArrayList<>();
-        // 匹配Tag文件标签名称
+        List<String> matchedWords = new ArrayList<>();
+
         for (Term term : termList) {
-            if (FileNamesSet.contains(term.word)) {
-                matchedTerms.add(term);
+            if (fileNamesSet.contains(term.word)) {
+                matchedWords.add(term.word);
             }
         }
-        // 匹配文档doc_id
-        for (DocumentSimpleInfo item:docLists){
-            for ( Term term:matchedTerms){
-                if(item.getFileName().toLowerCase().equals(term.word)){
-                    latestDocLists.add(item);
+
+        // Step2: 使用匹配的词从Redis查询对应的docList
+        List<DocumentSimpleInfo> result = new ArrayList<>();
+
+        for (String word : matchedWords) {
+            try {
+                String redisKey = "documentTag:doc:" + word;
+                List<DocumentSimpleInfo> docs = RedisUtil.getList(redisKey, DocumentSimpleInfo.class);
+                if (docs != null) {
+                    result.addAll(docs);
                 }
+            } catch (Exception e) {
+                System.err.println("从Redis查询失败, key: documentTag:doc:" + word);
+                e.printStackTrace();
             }
         }
-        return latestDocLists;
+
+        return result;
     }
 
     /**
@@ -116,30 +125,39 @@ public class GetDefaultSqlDictionary {
             String mysqlVersion = getMysqlVersion();
             String redisVersion = RedisUtil.get("documentTag:version");
 
-            List<DocumentSimpleInfo> docList;
             List<String> fileNames;
 
             // Step1 + Step2：判断是否变化
             if (redisVersion != null && redisVersion.equals(mysqlVersion)) {
                 System.out.println("【Redis】使用缓存数据");
-                docList = RedisUtil.getList("documentTag:docList", DocumentSimpleInfo.class);
                 fileNames = RedisUtil.getList("documentTag:fileNames", String.class);
             } else {
                 System.out.println("【MySQL】检测到数据变化，重新加载");
 
-                docList = readDocIdAndFileNameFromDB();
+                List<DocumentSimpleInfo> docList = readDocIdAndFileNameFromDB();
                 fileNames = new ArrayList<>();
+
+                // 按filename分组存储到Redis
+                Map<String, List<DocumentSimpleInfo>> fileNameToDocMap = new HashMap<>();
 
                 for (DocumentSimpleInfo item : docList) {
                     String fn = convertToLowerCase(item.getFileName());
                     if (fn != null && !fn.trim().isEmpty()) {
-                        fileNames.add(fn.trim());
+                        fn = fn.trim();
+                        fileNames.add(fn);
+
+                        // 按filename分组
+                        fileNameToDocMap.computeIfAbsent(fn, k -> new ArrayList<>()).add(item);
                     }
                 }
 
-                // Step3：更新 Redis
+                // 存储到Redis: 以filename为key
+                for (Map.Entry<String, List<DocumentSimpleInfo>> entry : fileNameToDocMap.entrySet()) {
+                    RedisUtil.setObject("documentTag:doc:" + entry.getKey(), entry.getValue());
+                }
+
+                // 更新版本和fileNames列表
                 RedisUtil.set("documentTag:version", mysqlVersion);
-                RedisUtil.setObject("documentTag:docList", docList);
                 RedisUtil.setObject("documentTag:fileNames", fileNames);
             }
 
@@ -154,7 +172,7 @@ public class GetDefaultSqlDictionary {
             viterbi.enableCustomDictionary(true);
             viterbi.enableCustomDictionaryForcing(true);
 
-            return new Keymapper(viterbi, fileNames, docList);
+            return new Keymapper(viterbi, fileNames);
 
         } catch (Exception e) {
             e.printStackTrace();
