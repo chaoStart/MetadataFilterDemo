@@ -1,15 +1,12 @@
 package dto;
 
 import com.hankcs.hanlp.dictionary.CustomDictionary;
-import com.hankcs.hanlp.dictionary.DynamicCustomDictionary;
-import com.hankcs.hanlp.seg.Viterbi.ViterbiSegment;
-import com.hankcs.hanlp.seg.common.Term;
 import filterdocid.DocumentSimpleInfo;
-
 import java.sql.*;
 import java.util.*;
 
 import static dto.SqlConnect.getMysqlVersion;
+
 
 public class GetDefaultSqlDictionary {
 
@@ -62,7 +59,7 @@ public class GetDefaultSqlDictionary {
 
         // 匹配文件名称filenames和文档doc_id信息
         CustomDictionary.parseText(text, (begin, end, value) -> {
-            String word = text.substring(begin, end);
+            String word = text.substring(begin, end);   //匹配到Tag标签名称
             if (dict.contains(word) && seen.add(word)) {
                 DocumentSimpleInfo docInfo = fileNameMap.get(word);
                 if (docInfo != null) {
