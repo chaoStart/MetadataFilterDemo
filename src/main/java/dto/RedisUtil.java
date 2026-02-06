@@ -2,7 +2,7 @@ package dto;
 
 import redis.clients.jedis.Jedis;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 
@@ -68,4 +68,28 @@ public class RedisUtil {
         return mapper.readValue(json,
                 mapper.getTypeFactory().constructCollectionType(Set.class, clazz));  // ✅ List改为Set
     }
+    /**
+     * 存储 Map 类型数据到 Redis
+     * @param key Redis键
+     * @param map 要存储的Map
+     */
+    public static <K, V> void setMap(String key, Map<K, V> map) throws Exception {
+        String json = mapper.writeValueAsString(map);
+        set(key, json);
+    }
+
+    /**
+     * 从 Redis 获取 Map 类型数据
+     * @param key Redis键
+     * @param keyClass key类型
+     * @param valueClass value类型
+     * @return Map<K, V>
+     */
+    public static <K, V> Map<K, V> getMap(String key, Class<K> keyClass, Class<V> valueClass) throws Exception {
+        String json = get(key);
+        if (json == null) return null;
+        return mapper.readValue(json,
+                mapper.getTypeFactory().constructMapType(Map.class, keyClass, valueClass));
+    }
+
 }

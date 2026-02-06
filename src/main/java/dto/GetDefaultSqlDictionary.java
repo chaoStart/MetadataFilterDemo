@@ -40,7 +40,7 @@ public class GetDefaultSqlDictionary {
      * 对外提供的核心方法：输入文本，返回其中命中的数据库指标词（Term 列表）
      */
     // text是用户的问题
-    public static List<DocumentSimpleInfo>  extractMetricTerms(String text) {
+    public static List<DocumentSimpleInfo>  extractMetricTerms(String text) throws Exception {
         if (text == null || text.trim().isEmpty()) {
             return Collections.emptyList();
         }
@@ -52,19 +52,26 @@ public class GetDefaultSqlDictionary {
                 return Collections.emptyList();
             }
         }
-        Set<String> dict = cachedKeymapper.getFileNames();
-        Map<String, DocumentSimpleInfo> fileNameMap = cachedKeymapper.getFileNameMap();
+//        Set<String> dict = cachedKeymapper.getFileNames();
+//        Map<String, DocumentSimpleInfo> fileNameMap = cachedKeymapper.getFileNameMap();
         List<DocumentSimpleInfo>  latestDocLists = new ArrayList<>();
         Set<String> seen = new HashSet<>();
+
+        // 从 Redis 取 Map，而不是从 Keymapper 取
+        Map<String, DocumentSimpleInfo> fileNameMap =
+                RedisUtil.getMap("documentTag:fileNameMap", String.class, DocumentSimpleInfo.class);
+
+        if (fileNameMap == null || fileNameMap.isEmpty()) {
+            return Collections.emptyList();
+        }
+
 
         // 匹配文件名称filenames和文档doc_id信息
         CustomDictionary.parseText(text, (begin, end, value) -> {
             String word = text.substring(begin, end);   //匹配到Tag标签名称
-            if (dict.contains(word) && seen.add(word)) {
-                DocumentSimpleInfo docInfo = fileNameMap.get(word);
-                if (docInfo != null) {
-                    latestDocLists.add(docInfo);
-                }
+            DocumentSimpleInfo docInfo = fileNameMap.get(word);
+            if (docInfo != null && seen.add(word)) {
+                latestDocLists.add(docInfo);
             }
         });
 
@@ -81,12 +88,13 @@ public class GetDefaultSqlDictionary {
 
             List<DocumentSimpleInfo> docList;
             Set<String> fileNames;
-
+            Map<String, DocumentSimpleInfo> fileNameMap = new HashMap<>();
             // Step1 + Step2：判断是否变化
             if (redisVersion != null && redisVersion.equals(mysqlVersion)) {
                 System.out.println("【Redis】使用缓存数据");
                 docList = RedisUtil.getList("documentTag:docList", DocumentSimpleInfo.class);
                 fileNames = RedisUtil.getSet("documentTag:fileNames", String.class);
+                fileNameMap = RedisUtil.getMap("documentTag:fileNameMap",String.class, DocumentSimpleInfo.class);
             } else {
                 System.out.println("【MySQL】检测到数据变化，重新加载");
 
@@ -98,6 +106,7 @@ public class GetDefaultSqlDictionary {
                     String fn = convertToLowerCase(item.getFileName());
                     if (fn != null && !fn.trim().isEmpty()) {
                         fileNames.add(fn.trim());
+                        fileNameMap.put(fn, item);
                     }
                 }
 
@@ -105,6 +114,7 @@ public class GetDefaultSqlDictionary {
                 RedisUtil.set("documentTag:version", mysqlVersion);
                 RedisUtil.setObject("documentTag:docList", docList);
                 RedisUtil.setObject("documentTag:fileNames", fileNames);
+                RedisUtil.setObject("documentTag:fileNameMap", fileNameMap);
             }
 
             // 加载自定义 HanLP 词典
@@ -128,7 +138,7 @@ public class GetDefaultSqlDictionary {
         return text != null ? text.toLowerCase() : null;
     }
     // 保留 main 用于测试
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         String text = "sc231ad和sc231aw产品手册的电源要求是什么？";
         String lowerText = convertToLowerCase(text);
         List<DocumentSimpleInfo> matchedDocIds = extractMetricTerms(lowerText);
