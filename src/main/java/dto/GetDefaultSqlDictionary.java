@@ -1,6 +1,8 @@
 package dto;
 
 import com.hankcs.hanlp.dictionary.CustomDictionary;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import filterdocid.DocumentSimpleInfo;
 import java.sql.*;
 import java.util.*;
@@ -13,39 +15,58 @@ public class GetDefaultSqlDictionary {
     private static Keymapper cachedKeymapper;
 
     // Redis Hash key 用于存储 filename -> DocumentSimpleInfo 映射
-    private static final String FILENAME_HASH_KEY = "documentTag:fileNameHash";
+    private static final String FILENAME_HASH_KEY = "documentTag:metadataListHash";
 
     /**
-     * 从 DocumentTag 表中读取 doc_id 和 file_name
+     * 从 DocumentTag 表中读取 doc_id 、 file_name和 metadata_list
      */
     public static List<DocumentSimpleInfo> readDocIdAndFileNameFromDB() {
         List<DocumentSimpleInfo> resultList = new ArrayList<>();
-        String sql = "SELECT doc_id, file_name FROM DocumentTag";
+        String sql = "SELECT doc_id, file_name, metadata_list FROM DocumentTag";
+
+        // 推荐：复用 ObjectMapper（可设为静态字段）
+        ObjectMapper objectMapper = new ObjectMapper();
+
         try (Connection conn = SqlConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
+
             while (rs.next()) {
                 String docId = rs.getString("doc_id");
                 String fileName = rs.getString("file_name");
+                String metadataJson = rs.getString("metadata_list"); // ← JSON 字符串
 
-                resultList.add(new DocumentSimpleInfo(docId, fileName));
+                // 解析 JSON 字符串为 List<String>
+                List<String> metadataList = null;
+                if (metadataJson != null && !metadataJson.trim().isEmpty()) {
+                    try {
+                        metadataList = objectMapper.readValue(metadataJson, new TypeReference<List<String>>() {});
+                    } catch (Exception e) {
+                        System.err.println("解析 metadata_list 失败，doc_id=" + docId + ", json=" + metadataJson);
+                        metadataList = Collections.emptyList(); // 或保留 null，根据业务需求
+                    }
+                    resultList.add(new DocumentSimpleInfo(docId, fileName, metadataList));
+                } else {
+//                    metadataList = Collections.emptyList(); // 或 null
+                    continue;
+                }
+
             }
-        }  catch (SQLException e) {
+        } catch (SQLException e) {
             System.err.println("数据库读取失败: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
-
         return resultList;
     }
 
     /**
      * 对外提供的核心方法：输入文本，返回其中命中的数据库指标词（Term 列表）
-     * 改进版：使用 Redis HMGET 直接查询匹配到的 filename，而不是取出整个 Map
+     * 改进版：使用 Redis HMGET 直接查询匹配到的 metadata_list，而不是取出整个 Map
      */
-    // text是用户的问题
-    public static List<DocumentSimpleInfo> extractMetricTerms(String text) throws Exception {
-        if (text == null || text.trim().isEmpty()) {
+    // 根据用户问题question进行hanlp提取关键词并匹配到DocumentSimpleInfo
+    public static List<DocumentSimpleInfo> extractMetricTerms(String question) throws Exception {
+        if (question == null || question.trim().isEmpty()) {
             return Collections.emptyList();
         }
         // 懒加载 + 简单单例（非严格线程安全，生产环境可加锁或使用更健壮的初始化方式）
@@ -57,26 +78,25 @@ public class GetDefaultSqlDictionary {
             }
         }
 
-        // 使用 HanLP 分词，收集匹配到的 filename 列表
-        List<String> matchedFileNames = new ArrayList<>();
+        // 使用 HanLP 分词，收集匹配到的 metadata_list中所有元数据信息
+        List<String> matchedMetadataListNames = new ArrayList<>();
         Set<String> seen = new HashSet<>();
 
-        CustomDictionary.parseText(text, (begin, end, value) -> {
-            String word = text.substring(begin, end);   // 匹配到的 Tag 标签名称
+        CustomDictionary.parseText(question, (begin, end, value) -> {
+            String word = question.substring(begin, end);   // 匹配到的 Tag 标签名称
             if (seen.add(word)) {  // 去重
-                matchedFileNames.add(word);
+                matchedMetadataListNames.add(word);
             }
         });
 
-        if (matchedFileNames.isEmpty()) {
+        if (matchedMetadataListNames.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // 使用 Redis HMGET 批量查询匹配到的 filename 对应的 DocumentSimpleInfo
+        // 使用 Redis HMGET 批量查询匹配到的 Metadata_list 对应的 DocumentSimpleInfo
         // 这里直接使用 Redis 查询语句，而不是取出整个 Map 再筛选
         List<DocumentSimpleInfo> latestDocLists = RedisUtil.hmget(
-            FILENAME_HASH_KEY,
-            matchedFileNames,
+            FILENAME_HASH_KEY, matchedMetadataListNames,
             DocumentSimpleInfo.class
         );
 
@@ -85,57 +105,49 @@ public class GetDefaultSqlDictionary {
 
     /**
      * 从数据库加载自定义词典
-     * 改进版：使用 Redis Hash 存储 filename -> DocumentSimpleInfo 映射
+     * 改进版：使用 Redis Hash 存储 metadataList -> DocumentSimpleInfo 映射
      */
     private static Keymapper loadCustomWordsFromDatabase() {
         try {
             String mysqlVersion = getMysqlVersion();
             String redisVersion = RedisUtil.get("documentTag:version");
-
-            List<DocumentSimpleInfo> docList;
-            Set<String> fileNames;
-            Map<String, DocumentSimpleInfo> fileNameMap = new HashMap<>();
-
+            List<DocumentSimpleInfo> docInfoList;
+            Set<String> customWords = new HashSet<>(); // ← 用于收集所有去重的自定义词（ metadata 标签）
             // Step1 + Step2：判断是否变化
             if (redisVersion != null && redisVersion.equals(mysqlVersion)) {
                 System.out.println("【Redis】使用缓存数据");
-                docList = RedisUtil.getList("documentTag:docList", DocumentSimpleInfo.class);
-                fileNames = RedisUtil.getSet("documentTag:fileNames", String.class);
-                // fileNameMap 现在存储在 Redis Hash 中，不需要单独获取整个 Map
+                docInfoList = RedisUtil.getList("documentTag:docInfoList", DocumentSimpleInfo.class);
             } else {
                 System.out.println("【MySQL】检测到数据变化，重新加载");
 
-                docList = readDocIdAndFileNameFromDB();
-                fileNames = new HashSet<>();
-
-                assert docList != null;
-                for (DocumentSimpleInfo item : docList) {
-                    String fn = convertToLowerCase(item.getFileName());
-                    if (fn != null && !fn.trim().isEmpty()) {
-                        fileNames.add(fn.trim());
-                        fileNameMap.put(fn, item);
+                docInfoList = readDocIdAndFileNameFromDB();
+                if (docInfoList != null) {
+                    for (DocumentSimpleInfo item : docInfoList) {
+                        // 添加 metadataList 中的每个标签（小写 + 去重）
+                        List<String> metadataList = item.getMetadataList();
+                        if (metadataList != null) {
+                            for (String tag : metadataList) {
+                                if (tag != null && !tag.trim().isEmpty()) {
+                                    customWords.add(tag.toLowerCase().trim());
+                                }
+                            }
+                        }
                     }
                 }
-
                 // Step3：更新 Redis
                 RedisUtil.set("documentTag:version", mysqlVersion);
-                RedisUtil.setObject("documentTag:docList", docList);
-                RedisUtil.setObject("documentTag:fileNames", fileNames);
-
-                // 使用 Redis Hash 存储 fileNameMap，支持按 field 查询
-                RedisUtil.delHash(FILENAME_HASH_KEY);  // 先删除旧的 Hash
-                RedisUtil.hmset(FILENAME_HASH_KEY, fileNameMap);  // 批量存储到 Redis Hash
+                RedisUtil.setObject("documentTag:docInfoList", docInfoList);
             }
 
-            // 加载自定义 HanLP 词典
-            CustomDictionary  myCustomDictionary = new CustomDictionary();
-            assert fileNames != null;
-            for (String name : fileNames) {
-                CustomDictionary.add(name, "nz 1024");
+            // === 批量加入 HanLP 自定义词典 ===
+            CustomDictionary mycustomDictionary = new CustomDictionary();
+            for (String word : customWords) {
+                CustomDictionary.add(word, "nz 1024"); // nz: 专有名词，1024: 频次（可调）
             }
 
-            assert docList != null;
-            return new Keymapper(myCustomDictionary, fileNames, docList);
+            System.out.printf("已加载 %d 个去重后的自定义词到 HanLP%n", customWords.size());
+
+            return new Keymapper(mycustomDictionary, docInfoList);
 
         } catch (Exception e) {
             e.printStackTrace();

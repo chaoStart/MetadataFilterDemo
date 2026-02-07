@@ -1,17 +1,21 @@
 package filterdocid;
 
+import java.util.List;
+
 public class DocumentSimpleInfo {
 
     private String docId;
     private String fileName;
+    private List<String> metadataList;
 
     // ✅ Jackson 反序列化必须要
     public DocumentSimpleInfo() {
     }
 
-    public DocumentSimpleInfo(String docId, String fileName) {
+    public DocumentSimpleInfo(String docId, String fileName, List<String> metadataList) {
         this.docId = docId;
         this.fileName = fileName;
+        this.metadataList = metadataList;
     }
     public void setDocId(String docId) {
 //        System.out.println("setDocId 被调用：" + docId);
@@ -29,6 +33,15 @@ public class DocumentSimpleInfo {
 
     public String getFileName() {
         return fileName;
+    }
+
+    public void setMetadataList(List<String> metadataList) {
+//        System.out.println("set metadataList 被调用：" + metadataList);
+        this.metadataList = metadataList;
+    }
+
+    public List<String> getMetadataList() {
+        return metadataList;
     }
 
     @Override

@@ -1,17 +1,25 @@
 package filterdocid;
 
+import java.util.List;
+
 public class Tag {
 
     private String fileName;
     private String author;
     private String dateTime;
     private String docId;
+    private List<String> metadataList; // 对应 metadata_list 字段
 
     public Tag(String fileName, String author, String dateTime, String docId) {
         this.fileName = fileName;
         this.author = author;
         this.dateTime = dateTime;
         this.docId = docId;
+    }
+    // 新增构造函数（元数据列表）
+    public Tag(String author, String fileName, String dateTime, String docId, List<String> metadataList) {
+        this( fileName,author, dateTime, docId);
+        this.metadataList = metadataList;
     }
 
     public String getDocId() {
@@ -29,7 +37,9 @@ public class Tag {
     public String getDateTime() {
         return dateTime;
     }
+    public List<String> getMetadataList() { return metadataList; }
 
+    public void setMetadataList(List<String> metadataList) { this.metadataList = metadataList; }
     @Override
     public String toString() {
         return "Tag{" +
@@ -37,6 +47,7 @@ public class Tag {
                 ", author='" + author + '\'' +
                 ", dateTime='" + dateTime + '\'' +
                 ", docId='" + docId + '\'' +
+                ", metadataList=" + metadataList +
                 '}';
     }
 }
