@@ -61,8 +61,8 @@ public class GetDefaultSqlDictionary {
     }
 
     /**
-     * 对外提供的核心方法：输入文本，返回其中命中的数据库指标词（Term 列表）
-     * 改进版：使用 Redis HMGET 直接查询匹配到的 metadata_list，而不是取出整个 Map
+     * 对外提供的核心方法：输入文本，返回其中命中的数据库指标词对应的所有文档
+     * 改进版：支持一对多映射，使用 Redis HMGET 查询并按 docId 去重
      */
     // 根据用户问题question进行hanlp提取关键词并匹配到DocumentSimpleInfo
     public static List<DocumentSimpleInfo> extractMetricTerms(String question) throws Exception {
@@ -93,19 +93,32 @@ public class GetDefaultSqlDictionary {
             return Collections.emptyList();
         }
 
-        // 使用 Redis HMGET 批量查询匹配到的 Metadata_list 对应的 DocumentSimpleInfo
-        // 这里直接使用 Redis 查询语句，而不是取出整个 Map 再筛选
-        List<DocumentSimpleInfo> latestDocLists = RedisUtil.hmget(
-            FILENAME_HASH_KEY, matchedMetadataListNames,
+        // ========== 使用新的 hmgetList 方法获取一对多映射 ==========
+        Map<String, List<DocumentSimpleInfo>> termToDocMap = RedisUtil.hmgetList(
+            FILENAME_HASH_KEY,
+            matchedMetadataListNames,
             DocumentSimpleInfo.class
         );
 
-        return latestDocLists;
+        // ========== 合并所有文档列表，并按 docId 去重 ==========
+        Map<String, DocumentSimpleInfo> docIdToInfoMap = new LinkedHashMap<>(); // 保持插入顺序
+
+        for (String term : matchedMetadataListNames) {
+            List<DocumentSimpleInfo> docList = termToDocMap.get(term);
+            if (docList != null) {
+                for (DocumentSimpleInfo doc : docList) {
+                    // 按 docId 去重，保留第一个出现的
+                    docIdToInfoMap.putIfAbsent(doc.getDocId(), doc);
+                }
+            }
+        }
+
+        return new ArrayList<>(docIdToInfoMap.values());
     }
 
     /**
      * 从数据库加载自定义词典
-     * 改进版：使用 Redis Hash 存储 metadataList -> DocumentSimpleInfo 映射
+     * 改进版：构建 术语 -> List<DocumentSimpleInfo> 的映射并存储到 Redis Hash
      */
     private static Keymapper loadCustomWordsFromDatabase() {
         try {
@@ -117,13 +130,10 @@ public class GetDefaultSqlDictionary {
             if (redisVersion != null && redisVersion.equals(mysqlVersion)) {
                 System.out.println("【Redis】使用缓存数据");
                 docInfoList = RedisUtil.getList("documentTag:docInfoList", DocumentSimpleInfo.class);
-            } else {
-                System.out.println("【MySQL】检测到数据变化，重新加载");
 
-                docInfoList = readDocIdAndFileNameFromDB();
+                // 从缓存的 docInfoList 中恢复 customWords（用于 HanLP 词典）
                 if (docInfoList != null) {
                     for (DocumentSimpleInfo item : docInfoList) {
-                        // 添加 metadataList 中的每个标签（小写 + 去重）
                         List<String> metadataList = item.getMetadataList();
                         if (metadataList != null) {
                             for (String tag : metadataList) {
@@ -133,6 +143,37 @@ public class GetDefaultSqlDictionary {
                             }
                         }
                     }
+                }
+            } else {
+                System.out.println("【MySQL】检测到数据变化，重新加载");
+
+                docInfoList = readDocIdAndFileNameFromDB();
+                if (docInfoList != null && !docInfoList.isEmpty()) {
+                    // ========== 构建 术语 -> List<DocumentSimpleInfo> 映射 ==========
+                    Map<String, List<DocumentSimpleInfo>> termToDocListMap = new HashMap<>();
+
+                    for (DocumentSimpleInfo docInfo : docInfoList) {
+                        // 添加 metadataList 中的每个标签（小写 + 去重）
+                        List<String> metadataList = docInfo.getMetadataList();
+                        if (metadataList != null) {
+                            for (String tag : metadataList) {
+                                if (tag != null && !tag.trim().isEmpty()) {
+                                    String normalizedTag = tag.toLowerCase().trim();
+                                    customWords.add(normalizedTag);
+
+                                    // 构建一对多映射：术语 -> List<DocumentSimpleInfo>
+                                    termToDocListMap
+                                        .computeIfAbsent(normalizedTag, k -> new ArrayList<>())
+                                        .add(docInfo);
+                                }
+                            }
+                        }
+                    }
+
+                    // ========== 存储映射到 Redis Hash ==========
+                    RedisUtil.delHash(FILENAME_HASH_KEY);
+                    RedisUtil.hmsetList(FILENAME_HASH_KEY, termToDocListMap);
+                    System.out.printf("已构建 %d 个术语的一对多映射并存储到 Redis Hash%n", termToDocListMap.size());
                 }
                 // Step3：更新 Redis
                 RedisUtil.set("documentTag:version", mysqlVersion);

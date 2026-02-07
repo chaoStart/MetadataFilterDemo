@@ -185,4 +185,49 @@ public class RedisUtil {
         }
     }
 
+    /**
+     * 批量存储到 Redis Hash，值为 List<T> 类型
+     * 适用于一个术语对应多个文档的场景
+     * @param hashKey Redis Hash 的 key
+     * @param map Map<String, List<T>>，field -> 文档列表
+     */
+    public static <T> void hmsetList(String hashKey, Map<String, List<T>> map) throws Exception {
+        try (Jedis jedis = getJedis()) {
+            Map<String, String> jsonMap = new HashMap<>();
+            for (Map.Entry<String, List<T>> entry : map.entrySet()) {
+                jsonMap.put(entry.getKey(), mapper.writeValueAsString(entry.getValue()));
+            }
+            if (!jsonMap.isEmpty()) {
+                jedis.hset(hashKey, jsonMap);
+            }
+        }
+    }
+
+    /**
+     * 从 Redis Hash 批量获取多个字段，每个字段的值是 List<T> 类型
+     * 适用于一个术语对应多个文档的场景
+     * @param hashKey Redis Hash 的 key
+     * @param fields 要查询的 field 列表（术语列表）
+     * @param elementClass 列表元素类型（如 DocumentSimpleInfo.class）
+     * @return Map<String, List<T>>，field -> 对应的文档列表
+     */
+    public static <T> Map<String, List<T>> hmgetList(String hashKey, List<String> fields, Class<T> elementClass) throws Exception {
+        Map<String, List<T>> result = new HashMap<>();
+        if (fields == null || fields.isEmpty()) {
+            return result;
+        }
+        try (Jedis jedis = getJedis()) {
+            List<String> jsonList = jedis.hmget(hashKey, fields.toArray(new String[0]));
+            for (int i = 0; i < fields.size(); i++) {
+                String json = jsonList.get(i);
+                if (json != null && !json.trim().isEmpty()) {
+                    List<T> list = mapper.readValue(json,
+                        mapper.getTypeFactory().constructCollectionType(List.class, elementClass));
+                    result.put(fields.get(i), list);
+                }
+            }
+        }
+        return result;
+    }
+
 }

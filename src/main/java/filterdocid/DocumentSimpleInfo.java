@@ -1,6 +1,7 @@
 package filterdocid;
 
 import java.util.List;
+import java.util.Objects;
 
 public class DocumentSimpleInfo {
 
@@ -50,5 +51,18 @@ public class DocumentSimpleInfo {
                 "docId='" + docId + '\'' +
                 ", fileName='" + fileName + '\'' +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DocumentSimpleInfo that = (DocumentSimpleInfo) o;
+        return Objects.equals(docId, that.docId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(docId);
     }
 }
