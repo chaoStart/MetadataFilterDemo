@@ -69,6 +69,7 @@ public class GetDefaultSqlDictionary {
         // 匹配文件名称filenames和文档doc_id信息
         CustomDictionary.parseText(text, (begin, end, value) -> {
             String word = text.substring(begin, end);   //匹配到Tag标签名称
+            System.out.println("匹配到Tag标签名称：" + word);
             DocumentSimpleInfo docInfo = fileNameMap.get(word);
             if (docInfo != null && seen.add(word)) {
                 latestDocLists.add(docInfo);
