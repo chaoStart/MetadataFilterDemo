@@ -3,7 +3,9 @@ package dto;
 import redis.clients.jedis.Jedis;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Set;
 
 public class RedisUtil {
@@ -90,6 +92,97 @@ public class RedisUtil {
         if (json == null) return null;
         return mapper.readValue(json,
                 mapper.getTypeFactory().constructMapType(Map.class, keyClass, valueClass));
+    }
+
+    // ==================== Redis Hash 操作方法 ====================
+
+    /**
+     * 使用 Redis Hash 存储 filename -> DocumentSimpleInfo 映射
+     * @param hashKey Redis Hash 的 key
+     * @param field Hash 中的 field（即 filename）
+     * @param value 要存储的对象
+     */
+    public static <T> void hset(String hashKey, String field, T value) throws Exception {
+        try (Jedis jedis = getJedis()) {
+            String json = mapper.writeValueAsString(value);
+            jedis.hset(hashKey, field, json);
+        }
+    }
+
+    /**
+     * 批量存储到 Redis Hash
+     * @param hashKey Redis Hash 的 key
+     * @param map 要存储的 Map<String, T>
+     */
+    public static <T> void hmset(String hashKey, Map<String, T> map) throws Exception {
+        try (Jedis jedis = getJedis()) {
+            Map<String, String> jsonMap = new HashMap<>();
+            for (Map.Entry<String, T> entry : map.entrySet()) {
+                jsonMap.put(entry.getKey(), mapper.writeValueAsString(entry.getValue()));
+            }
+            if (!jsonMap.isEmpty()) {
+                jedis.hset(hashKey, jsonMap);
+            }
+        }
+    }
+
+    /**
+     * 从 Redis Hash 获取单个字段
+     * @param hashKey Redis Hash 的 key
+     * @param field Hash 中的 field
+     * @param clazz 返回对象类型
+     * @return 反序列化后的对象
+     */
+    public static <T> T hget(String hashKey, String field, Class<T> clazz) throws Exception {
+        try (Jedis jedis = getJedis()) {
+            String json = jedis.hget(hashKey, field);
+            if (json == null) return null;
+            return mapper.readValue(json, clazz);
+        }
+    }
+
+    /**
+     * 从 Redis Hash 批量获取多个字段（使用 HMGET 命令）
+     * @param hashKey Redis Hash 的 key
+     * @param fields 要查询的 field 列表
+     * @param clazz 返回对象类型
+     * @return 对应的对象列表（顺序与 fields 一致，不存在的返回 null）
+     */
+    public static <T> List<T> hmget(String hashKey, List<String> fields, Class<T> clazz) throws Exception {
+        if (fields == null || fields.isEmpty()) {
+            return new ArrayList<>();
+        }
+        try (Jedis jedis = getJedis()) {
+            List<String> jsonList = jedis.hmget(hashKey, fields.toArray(new String[0]));
+            List<T> result = new ArrayList<>();
+            for (String json : jsonList) {
+                if (json != null) {
+                    result.add(mapper.readValue(json, clazz));
+                }
+            }
+            return result;
+        }
+    }
+
+    /**
+     * 删除 Redis Hash
+     * @param hashKey Redis Hash 的 key
+     */
+    public static void delHash(String hashKey) {
+        try (Jedis jedis = getJedis()) {
+            jedis.del(hashKey);
+        }
+    }
+
+    /**
+     * 检查 Redis Hash 是否存在
+     * @param hashKey Redis Hash 的 key
+     * @return 是否存在
+     */
+    public static boolean hexists(String hashKey) {
+        try (Jedis jedis = getJedis()) {
+            return jedis.exists(hashKey);
+        }
     }
 
 }

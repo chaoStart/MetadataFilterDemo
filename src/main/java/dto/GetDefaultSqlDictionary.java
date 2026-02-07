@@ -12,6 +12,9 @@ public class GetDefaultSqlDictionary {
 
     private static Keymapper cachedKeymapper;
 
+    // Redis Hash key 用于存储 filename -> DocumentSimpleInfo 映射
+    private static final String FILENAME_HASH_KEY = "documentTag:fileNameHash";
+
     /**
      * 从 DocumentTag 表中读取 doc_id 和 file_name
      */
@@ -38,9 +41,10 @@ public class GetDefaultSqlDictionary {
 
     /**
      * 对外提供的核心方法：输入文本，返回其中命中的数据库指标词（Term 列表）
+     * 改进版：使用 Redis HMGET 直接查询匹配到的 filename，而不是取出整个 Map
      */
     // text是用户的问题
-    public static List<DocumentSimpleInfo>  extractMetricTerms(String text) throws Exception {
+    public static List<DocumentSimpleInfo> extractMetricTerms(String text) throws Exception {
         if (text == null || text.trim().isEmpty()) {
             return Collections.emptyList();
         }
@@ -52,34 +56,36 @@ public class GetDefaultSqlDictionary {
                 return Collections.emptyList();
             }
         }
-//        Set<String> dict = cachedKeymapper.getFileNames();
-//        Map<String, DocumentSimpleInfo> fileNameMap = cachedKeymapper.getFileNameMap();
-        List<DocumentSimpleInfo>  latestDocLists = new ArrayList<>();
+
+        // 使用 HanLP 分词，收集匹配到的 filename 列表
+        List<String> matchedFileNames = new ArrayList<>();
         Set<String> seen = new HashSet<>();
 
-        // 从 Redis 取 Map，而不是从 Keymapper 取
-        Map<String, DocumentSimpleInfo> fileNameMap =
-                RedisUtil.getMap("documentTag:fileNameMap", String.class, DocumentSimpleInfo.class);
+        CustomDictionary.parseText(text, (begin, end, value) -> {
+            String word = text.substring(begin, end);   // 匹配到的 Tag 标签名称
+            if (seen.add(word)) {  // 去重
+                matchedFileNames.add(word);
+            }
+        });
 
-        if (fileNameMap == null || fileNameMap.isEmpty()) {
+        if (matchedFileNames.isEmpty()) {
             return Collections.emptyList();
         }
 
-
-        // 匹配文件名称filenames和文档doc_id信息
-        CustomDictionary.parseText(text, (begin, end, value) -> {
-            String word = text.substring(begin, end);   //匹配到Tag标签名称
-            DocumentSimpleInfo docInfo = fileNameMap.get(word);
-            if (docInfo != null && seen.add(word)) {
-                latestDocLists.add(docInfo);
-            }
-        });
+        // 使用 Redis HMGET 批量查询匹配到的 filename 对应的 DocumentSimpleInfo
+        // 这里直接使用 Redis 查询语句，而不是取出整个 Map 再筛选
+        List<DocumentSimpleInfo> latestDocLists = RedisUtil.hmget(
+            FILENAME_HASH_KEY,
+            matchedFileNames,
+            DocumentSimpleInfo.class
+        );
 
         return latestDocLists;
     }
 
     /**
      * 从数据库加载自定义词典
+     * 改进版：使用 Redis Hash 存储 filename -> DocumentSimpleInfo 映射
      */
     private static Keymapper loadCustomWordsFromDatabase() {
         try {
@@ -89,12 +95,13 @@ public class GetDefaultSqlDictionary {
             List<DocumentSimpleInfo> docList;
             Set<String> fileNames;
             Map<String, DocumentSimpleInfo> fileNameMap = new HashMap<>();
+
             // Step1 + Step2：判断是否变化
             if (redisVersion != null && redisVersion.equals(mysqlVersion)) {
                 System.out.println("【Redis】使用缓存数据");
                 docList = RedisUtil.getList("documentTag:docList", DocumentSimpleInfo.class);
                 fileNames = RedisUtil.getSet("documentTag:fileNames", String.class);
-                fileNameMap = RedisUtil.getMap("documentTag:fileNameMap",String.class, DocumentSimpleInfo.class);
+                // fileNameMap 现在存储在 Redis Hash 中，不需要单独获取整个 Map
             } else {
                 System.out.println("【MySQL】检测到数据变化，重新加载");
 
@@ -114,7 +121,10 @@ public class GetDefaultSqlDictionary {
                 RedisUtil.set("documentTag:version", mysqlVersion);
                 RedisUtil.setObject("documentTag:docList", docList);
                 RedisUtil.setObject("documentTag:fileNames", fileNames);
-                RedisUtil.setObject("documentTag:fileNameMap", fileNameMap);
+
+                // 使用 Redis Hash 存储 fileNameMap，支持按 field 查询
+                RedisUtil.delHash(FILENAME_HASH_KEY);  // 先删除旧的 Hash
+                RedisUtil.hmset(FILENAME_HASH_KEY, fileNameMap);  // 批量存储到 Redis Hash
             }
 
             // 加载自定义 HanLP 词典
