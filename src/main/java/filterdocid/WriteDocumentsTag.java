@@ -146,7 +146,6 @@ public class WriteDocumentsTag {
     /**
      * 修改标签元数据（仅更新已存在的 doc_id 记录）
      */
-
     // 修改标签元数据metadata_list
     public void updateTag(List<Tag> tags) {
         if (tags == null || tags.isEmpty()) {

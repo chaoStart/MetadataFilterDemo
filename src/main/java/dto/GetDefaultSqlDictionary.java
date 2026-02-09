@@ -197,7 +197,7 @@ public class GetDefaultSqlDictionary {
     }
     // 保留 main 用于测试
     public static void main(String[] args) throws Exception {
-        String text = "sc231ad和sc231aw产品手册的电源要求是什么？";
+        String text = "PLC文档和sc235aw产品手册的电源要求是什么？";
         String lowerText = convertToLowerCase(text);
         List<DocumentSimpleInfo> matchedDocIds = extractMetricTerms(lowerText);
 
@@ -206,7 +206,8 @@ public class GetDefaultSqlDictionary {
             System.out.println("（无匹配项）");
         } else {
             matchedDocIds.forEach(term ->
-                    System.out.println( "  (docIds=" + term.getDocId() + ", fileName=" + term.getFileName() + ")")
+                    System.out.println( "  (docIds=" + term.getDocId() + ", fileName=" + term.getFileName() +
+                            ", metadata=" + term.getMetadataList() + ")")
             );
         }
         System.out.println("--------------------------------");
