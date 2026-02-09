@@ -14,8 +14,8 @@ public class GetDefaultSqlDictionary {
 
     private static Keymapper cachedKeymapper;
 
-    // Redis Hash key 用于存储 filename -> DocumentSimpleInfo 映射
-    private static final String FILENAME_HASH_KEY = "documentTag:metadataListHash";
+    // Redis Hash key 用于存储 MetaData_List_Hash -> DocumentSimpleInfo 映射
+    private static final String MetaData_List_Hash = "documentTag:metadataListHash";
 
     /**
      * 从 DocumentTag 表中读取 doc_id 、 file_name和 metadata_list
@@ -95,7 +95,7 @@ public class GetDefaultSqlDictionary {
 
         // ========== 使用新的 hmgetList 方法获取一对多映射 ==========
         Map<String, List<DocumentSimpleInfo>> termToDocMap = RedisUtil.hmgetList(
-            FILENAME_HASH_KEY,
+            MetaData_List_Hash,
             matchedMetadataListNames,
             DocumentSimpleInfo.class
         );
@@ -130,12 +130,11 @@ public class GetDefaultSqlDictionary {
             if (redisVersion != null && redisVersion.equals(mysqlVersion)) {
                 System.out.println("【Redis】使用缓存数据");
                 docInfoList = RedisUtil.getList("documentTag:docInfoList", DocumentSimpleInfo.class);
-
                 // 从缓存的 docInfoList 中恢复 customWords（用于 HanLP 词典）
                 if (docInfoList != null) {
                     for (DocumentSimpleInfo item : docInfoList) {
                         List<String> metadataList = item.getMetadataList();
-                        if (metadataList != null) {
+                        if (metadataList != null && !metadataList.isEmpty()) {
                             for (String tag : metadataList) {
                                 if (tag != null && !tag.trim().isEmpty()) {
                                     customWords.add(tag.toLowerCase().trim());
@@ -146,12 +145,10 @@ public class GetDefaultSqlDictionary {
                 }
             } else {
                 System.out.println("【MySQL】检测到数据变化，重新加载");
-
                 docInfoList = readDocIdAndFileNameFromDB();
                 if (docInfoList != null && !docInfoList.isEmpty()) {
                     // ========== 构建 术语 -> List<DocumentSimpleInfo> 映射 ==========
                     Map<String, List<DocumentSimpleInfo>> termToDocListMap = new HashMap<>();
-
                     for (DocumentSimpleInfo docInfo : docInfoList) {
                         // 添加 metadataList 中的每个标签（小写 + 去重）
                         List<String> metadataList = docInfo.getMetadataList();
@@ -160,7 +157,6 @@ public class GetDefaultSqlDictionary {
                                 if (tag != null && !tag.trim().isEmpty()) {
                                     String normalizedTag = tag.toLowerCase().trim();
                                     customWords.add(normalizedTag);
-
                                     // 构建一对多映射：术语 -> List<DocumentSimpleInfo>
                                     termToDocListMap
                                         .computeIfAbsent(normalizedTag, k -> new ArrayList<>())
@@ -169,10 +165,9 @@ public class GetDefaultSqlDictionary {
                             }
                         }
                     }
-
                     // ========== 存储映射到 Redis Hash ==========
-                    RedisUtil.delHash(FILENAME_HASH_KEY);
-                    RedisUtil.hmsetList(FILENAME_HASH_KEY, termToDocListMap);
+                    RedisUtil.delHash(MetaData_List_Hash);
+                    RedisUtil.hmsetList(MetaData_List_Hash, termToDocListMap);
                     System.out.printf("已构建 %d 个术语的一对多映射并存储到 Redis Hash%n", termToDocListMap.size());
                 }
                 // Step3：更新 Redis
