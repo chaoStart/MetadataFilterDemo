@@ -1,4 +1,4 @@
-package filterdocid;
+package com.springsciyon.business.rag.filterdocid;
 
 import java.util.List;
 

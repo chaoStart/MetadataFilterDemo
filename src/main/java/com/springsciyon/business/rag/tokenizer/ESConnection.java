@@ -1,4 +1,4 @@
-package tokenizer;
+package com.springsciyon.business.rag.tokenizer;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;

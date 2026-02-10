@@ -1,4 +1,4 @@
-package tokenizer;
+package com.springsciyon.business.rag.tokenizer;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -69,7 +69,7 @@ public class TermWeightDealer {
         List<String> res = new ArrayList<>();
 
         String[] tokens = tokenizer.tokenize(txt).split("\\s+");
-//        String[] tokens = tokenizer.tokenize(txt).split("\\s+");
+//        String[] tokens = rag.tokenizer.tokenize(txt).split("\\s+");
         for (String t : tokens) {
             String tk = t;
             if ((stpwd && stopWords.contains(tk)) ||

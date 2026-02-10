@@ -1,8 +1,8 @@
-package filterdocid;
+package com.springsciyon.business.rag.filterdocid;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dto.SqlConnect;
+import com.springsciyon.business.rag.dto.SqlConnect;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -294,33 +294,33 @@ public class WriteDocumentsTag {
         }
     }
 
-    public static void main(String[] args) {
-        WriteDocumentsTag info = new WriteDocumentsTag();
-
-        List<String> querykbIds = Arrays.asList("571776832787972098","571776832787972097");
-        List<Tag> tags = info.getAllTagsByKbIds(querykbIds);
-        System.out.println("kb_ids = " + querykbIds + " 下所有 doc_id 的 Tag 信息：");
-        for (Tag tag : tags) {
-            System.out.println("file_name = " + tag.getFileName()
-                    + ", author = " + tag.getAuthor()
-                    + ", date_time = " + tag.getDateTime()
-                    + ", doc_id = " + tag.getDocId()
-                    + ", metadata_list = " + tag.getMetadataList()
-            );
-        }
-        info.saveTagsToDatabase(tags);
-
-        // 插入带 metadata_list 的数据
-        ArrayList<Tag> insertTags = new ArrayList<>();
-        List<String> meta1 = Arrays.asList("sc235aw", "235aw产品手册", "NT6000文档");
-        insertTags.add(new Tag("研发管理部门", "235aw.pdf", "2025-01-10 10:30:00", "756063966790811660", meta1));
-
-        info.addTag(insertTags);
-
-        // 更新 metadata_list
-        List<String> meta2 = Arrays.asList("sc235Aw", "231AW产品手册","NT6000文档");
-        ArrayList<Tag> updateTags = new ArrayList<>();
-        updateTags.add(new Tag("研发管理部门", "sc235AW产品手册.pdf", "2025-02-01 00:00:00", "756063966790811660", meta2));
-        info.updateTag(updateTags);
-    }
+//    public static void main(String[] args) {
+//        WriteDocumentsTag info = new WriteDocumentsTag();
+//
+//        List<String> querykbIds = Arrays.asList("571776832787972098","571776832787972097");
+//        List<Tag> tags = info.getAllTagsByKbIds(querykbIds);
+//        System.out.println("kb_ids = " + querykbIds + " 下所有 doc_id 的 Tag 信息：");
+//        for (Tag tag : tags) {
+//            System.out.println("file_name = " + tag.getFileName()
+//                    + ", author = " + tag.getAuthor()
+//                    + ", date_time = " + tag.getDateTime()
+//                    + ", doc_id = " + tag.getDocId()
+//                    + ", metadata_list = " + tag.getMetadataList()
+//            );
+//        }
+//        info.saveTagsToDatabase(tags);
+//
+//        // 插入带 metadata_list 的数据
+//        ArrayList<Tag> insertTags = new ArrayList<>();
+//        List<String> meta1 = Arrays.asList("sc235aw", "235aw产品手册", "NT6000文档");
+//        insertTags.add(new Tag("研发管理部门", "235aw.pdf", "2025-01-10 10:30:00", "756063966790811660", meta1));
+//
+//        info.addTag(insertTags);
+//
+//        // 更新 metadata_list
+//        List<String> meta2 = Arrays.asList("sc235Aw", "231AW产品手册","NT6000文档");
+//        ArrayList<Tag> updateTags = new ArrayList<>();
+//        updateTags.add(new Tag("研发管理部门", "sc235AW产品手册.pdf", "2025-02-01 00:00:00", "756063966790811660", meta2));
+//        info.updateTag(updateTags);
+//    }
 }

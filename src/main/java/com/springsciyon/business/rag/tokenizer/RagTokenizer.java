@@ -1,4 +1,4 @@
-package tokenizer;
+package com.springsciyon.business.rag.tokenizer;
 
 import co.elastic.clients.elasticsearch.indices.analyze.AnalyzeToken;
 import com.github.houbb.opencc4j.util.ZhConverterUtil;
@@ -72,7 +72,7 @@ public class RagTokenizer {
             } catch (Exception e) {
                 logger.warning("[HUQIE]: 保存 trie 文件失败: " + e.getMessage());
             }
-            logger.warning("[HUQIE]: 未找到词典文件: " + dictFileName + "，tokenizer 将无词频信息！");
+            logger.warning("[HUQIE]: 未找到词典文件: " + dictFileName + "，rag.tokenizer 将无词频信息！");
         }
     }
     // ---------- 辅助：返回项目根目录（和 Python get_project_base_directory 行为类似） ----------

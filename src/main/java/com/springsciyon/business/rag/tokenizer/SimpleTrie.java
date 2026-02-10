@@ -1,5 +1,5 @@
 // SimpleTrie.java
-package tokenizer;
+package com.springsciyon.business.rag.tokenizer;
 
 import java.io.*;
 import java.util.*;

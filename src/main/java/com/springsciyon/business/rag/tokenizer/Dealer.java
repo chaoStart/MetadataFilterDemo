@@ -1,4 +1,4 @@
-package tokenizer;
+package com.springsciyon.business.rag.tokenizer;
 
 import co.elastic.clients.elasticsearch.core.search.BoundaryScanner;
 import co.elastic.clients.elasticsearch.core.search.Hit;
@@ -692,7 +692,7 @@ public class Dealer {
                         // 新增原始关键词
                         importantKwd.add(ikl);
 
-                        // 调用 tokenizer 进行分词
+                        // 调用 rag.tokenizer 进行分词
                         try {
                             String tokenized = tokenizer.tokenize(ikl); // 返回字符串
                             if (tokenized != null && !tokenized.isEmpty()) {

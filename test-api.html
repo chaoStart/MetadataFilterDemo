@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tag API 测试页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .api-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .api-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 100px;
+            font-family: 'Courier New', monospace;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .response {
+            margin-top: 15px;
+            padding: 15px;
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            min-height: 100px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .response.success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .response.error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .small-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏷️ Tag API 测试页面</h1>
+
+        <!-- 健康检查 -->
+        <div class="api-section">
+            <h2>健康检查</h2>
+            <button onclick="healthCheck()">检查服务状态</button>
+            <div id="health-response" class="response"></div>
+        </div>
+
+        <!-- 添加标签 -->
+        <div class="api-section">
+            <h2>添加标签</h2>
+            <div class="form-group">
+                <label>文档ID *</label>
+                <input type="text" id="add-docid" placeholder="例如: 756063966790811660">
+            </div>
+            <div class="form-group">
+                <label>元数据列表（JSON数组）</label>
+                <input type="text" id="add-metadata" placeholder='例如: ["sc235aw", "235aw产品手册", "NT6000文档"]'>
+            </div>
+            <div class="form-group">
+                <label>文件名</label>
+                <input type="text" id="add-filename" placeholder="例如: 235aw.pdf">
+            </div>
+            <div class="form-group">
+                <label>作者</label>
+                <input type="text" id="add-author" placeholder="例如: 研发管理部门">
+            </div>
+            <div class="form-group">
+                <label>日期时间</label>
+                <input type="text" id="add-datetime" placeholder="例如: 2025-01-10 10:30:00">
+            </div>
+            <button onclick="addTag()">添加标签</button>
+            <div id="add-response" class="response"></div>
+        </div>
+
+        <!-- 查询和删除 -->
+        <div class="grid">
+            <!-- 查询标签 -->
+            <div class="api-section">
+                <h2>查询标签</h2>
+                <div class="form-group">
+                    <label>文档ID *</label>
+                    <input type="text" id="get-docid" placeholder="例如: 756063966790811660">
+                </div>
+                <button onclick="getTag()">查询标签</button>
+                <div id="get-response" class="response"></div>
+            </div>
+
+            <!-- 删除标签 -->
+            <div class="api-section">
+                <h2>删除标签</h2>
+                <div class="form-group">
+                    <label>文档ID *</label>
+                    <input type="text" id="delete-docid" placeholder="例如: 756063966790811660">
+                </div>
+                <button onclick="deleteTag()">删除标签</button>
+                <div id="delete-response" class="response"></div>
+            </div>
+        </div>
+
+        <!-- 更新标签 -->
+        <div class="api-section">
+            <h2>更新标签</h2>
+            <div class="form-group">
+                <label>文档ID *</label>
+                <input type="text" id="update-docid" placeholder="例如: 756063966790811660">
+            </div>
+            <div class="form-group">
+                <label>元数据列表（JSON数组）</label>
+                <input type="text" id="update-metadata" placeholder='例如: ["sc235Aw", "231AW产品手册"]'>
+            </div>
+            <div class="form-group">
+                <label>文件名</label>
+                <input type="text" id="update-filename" placeholder="例如: sc235AW产品手册.pdf">
+            </div>
+            <div class="form-group">
+                <label>作者</label>
+                <input type="text" id="update-author" placeholder="例如: 研发管理部门">
+            </div>
+            <div class="form-group">
+                <label>日期时间</label>
+                <input type="text" id="update-datetime" placeholder="例如: 2025-02-01 00:00:00">
+            </div>
+            <button onclick="updateTag()">更新标签</button>
+            <div id="update-response" class="response"></div>
+        </div>
+
+        <!-- 批量操作 -->
+        <div class="api-section">
+            <h2>批量添加标签</h2>
+            <div class="form-group">
+                <label>JSON 数组</label>
+                <textarea id="batch-add-json" placeholder='例如:
+[
+  {
+    "doc_id": "756063966790811660",
+    "metadataList": ["sc235aw", "235aw产品手册"],
+    "filename": "235aw.pdf",
+    "author": "研发部",
+    "dateTime": "2025-01-10 10:30:00"
+  }
+]'></textarea>
+            </div>
+            <button onclick="batchAddTags()">批量添加</button>
+            <div id="batch-add-response" class="response"></div>
+        </div>
+
+        <div class="api-section">
+            <h2>批量删除标签</h2>
+            <div class="form-group">
+                <label>文档ID列表（逗号分隔）</label>
+                <input type="text" id="batch-delete-ids" placeholder="例如: 756063966790811660,756063966790811661">
+            </div>
+            <button onclick="batchDeleteTags()">批量删除</button>
+            <div id="batch-delete-response" class="response"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8080/api/tags';
+
+        function displayResponse(elementId, data, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = 'response ' + (isSuccess ? 'success' : 'error');
+        }
+
+        async function healthCheck() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                displayResponse('health-response', data, response.ok);
+            } catch (error) {
+                displayResponse('health-response', { error: error.message }, false);
+            }
+        }
+
+        async function addTag() {
+            const docId = document.getElementById('add-docid').value;
+            const metadataStr = document.getElementById('add-metadata').value;
+            const filename = document.getElementById('add-filename').value;
+            const author = document.getElementById('add-author').value;
+            const dateTime = document.getElementById('add-datetime').value;
+
+            if (!docId) {
+                alert('文档ID不能为空');
+                return;
+            }
+
+            let metadataList = null;
+            if (metadataStr) {
+                try {
+                    metadataList = JSON.parse(metadataStr);
+                } catch (e) {
+                    alert('元数据列表格式错误，请输入有效的JSON数组');
+                    return;
+                }
+            }
+
+            const requestBody = {
+                doc_id: docId,
+                metadataList: metadataList,
+                filename: filename || null,
+                author: author || null,
+                dateTime: dateTime || null
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+                const data = await response.json();
+                displayResponse('add-response', data, response.ok);
+            } catch (error) {
+                displayResponse('add-response', { error: error.message }, false);
+            }
+        }
+
+        async function getTag() {
+            const docId = document.getElementById('get-docid').value;
+
+            if (!docId) {
+                alert('文档ID不能为空');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/get/${docId}`);
+                const data = await response.json();
+                displayResponse('get-response', data, response.ok);
+            } catch (error) {
+                displayResponse('get-response', { error: error.message }, false);
+            }
+        }
+
+        async function deleteTag() {
+            const docId = document.getElementById('delete-docid').value;
+
+            if (!docId) {
+                alert('文档ID不能为空');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/delete/${docId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                displayResponse('delete-response', data, response.ok);
+            } catch (error) {
+                displayResponse('delete-response', { error: error.message }, false);
+            }
+        }
+
+        async function updateTag() {
+            const docId = document.getElementById('update-docid').value;
+            const metadataStr = document.getElementById('update-metadata').value;
+            const filename = document.getElementById('update-filename').value;
+            const author = document.getElementById('update-author').value;
+            const dateTime = document.getElementById('update-datetime').value;
+
+            if (!docId) {
+                alert('文档ID不能为空');
+                return;
+            }
+
+            let metadataList = null;
+            if (metadataStr) {
+                try {
+                    metadataList = JSON.parse(metadataStr);
+                } catch (e) {
+                    alert('元数据列表格式错误，请输入有效的JSON数组');
+                    return;
+                }
+            }
+
+            const requestBody = {
+                doc_id: docId,
+                metadataList: metadataList,
+                filename: filename || null,
+                author: author || null,
+                dateTime: dateTime || null
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/update`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+                const data = await response.json();
+                displayResponse('update-response', data, response.ok);
+            } catch (error) {
+                displayResponse('update-response', { error: error.message }, false);
+            }
+        }
+
+        async function batchAddTags() {
+            const jsonStr = document.getElementById('batch-add-json').value;
+
+            if (!jsonStr) {
+                alert('请输入JSON数组');
+                return;
+            }
+
+            let requestBody;
+            try {
+                requestBody = JSON.parse(jsonStr);
+            } catch (e) {
+                alert('JSON格式错误: ' + e.message);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/batch-add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+                const data = await response.json();
+                displayResponse('batch-add-response', data, response.ok);
+            } catch (error) {
+                displayResponse('batch-add-response', { error: error.message }, false);
+            }
+        }
+
+        async function batchDeleteTags() {
+            const idsStr = document.getElementById('batch-delete-ids').value;
+
+            if (!idsStr) {
+                alert('请输入文档ID列表');
+                return;
+            }
+
+            const docIds = idsStr.split(',').map(id => id.trim()).filter(id => id);
+
+            if (docIds.length === 0) {
+                alert('没有有效的文档ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/batch-delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(docIds)
+                });
+                const data = await response.json();
+                displayResponse('batch-delete-response', data, response.ok);
+            } catch (error) {
+                displayResponse('batch-delete-response', { error: error.message }, false);
+            }
+        }
+
+        // 页面加载时自动执行健康检查
+        window.onload = function() {
+            healthCheck();
+        };
+    </script>
+</body>
+</html>

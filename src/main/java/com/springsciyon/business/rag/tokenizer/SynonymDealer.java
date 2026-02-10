@@ -1,4 +1,4 @@
-package tokenizer;
+package com.springsciyon.business.rag.tokenizer;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

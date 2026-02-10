@@ -1,4 +1,4 @@
-package dto;
+package com.springsciyon.business.rag.dto;
 
 import redis.clients.jedis.Jedis;
 import com.fasterxml.jackson.databind.ObjectMapper;

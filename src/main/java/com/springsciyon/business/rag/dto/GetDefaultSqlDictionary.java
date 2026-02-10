@@ -1,13 +1,13 @@
-package dto;
+package com.springsciyon.business.rag.dto;
 
 import com.hankcs.hanlp.dictionary.CustomDictionary;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import filterdocid.DocumentSimpleInfo;
+import com.springsciyon.business.rag.filterdocid.DocumentSimpleInfo;
 import java.sql.*;
 import java.util.*;
 
-import static dto.SqlConnect.getMysqlVersion;
+import static com.springsciyon.business.rag.dto.SqlConnect.getMysqlVersion;
 
 
 public class GetDefaultSqlDictionary {

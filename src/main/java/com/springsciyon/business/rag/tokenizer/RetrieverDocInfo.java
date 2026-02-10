@@ -1,13 +1,13 @@
-package tokenizer;
+package com.springsciyon.business.rag.tokenizer;
 
-import filterdocid.DocumentSimpleInfo;
+import com.springsciyon.business.rag.filterdocid.DocumentSimpleInfo;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static dto.GetDefaultSqlDictionary.extractMetricTerms;
+import static com.springsciyon.business.rag.dto.GetDefaultSqlDictionary.extractMetricTerms;
 
 public class RetrieverDocInfo {
 

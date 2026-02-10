@@ -1,13 +1,10 @@
-package dto;
+package com.springsciyon.business.rag.dto;
 
 import com.hankcs.hanlp.dictionary.CustomDictionary;
-import com.hankcs.hanlp.seg.Viterbi.ViterbiSegment;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
 
-import filterdocid.DocumentSimpleInfo;
+import java.util.List;
+
+import com.springsciyon.business.rag.filterdocid.DocumentSimpleInfo;
 import lombok.Data;
 @Data
 public class Keymapper {
