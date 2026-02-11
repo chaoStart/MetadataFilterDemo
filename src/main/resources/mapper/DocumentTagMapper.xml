@@ -12,13 +12,27 @@
         FROM DocumentTag
     </select>
 
-    <!-- 查询 doc_id、file_name、metadata_list -->
-    <select id="selectSimpleInfo" resultType="com.springsciyon.business.rag.entity.DocumentTagEntity">
+<!--    &lt;!&ndash; 查询 doc_id、file_name、metadata_list &ndash;&gt;-->
+<!--    <select id="selectSimpleInfo" resultType="com.springsciyon.business.rag.entity.DocumentTagEntity">-->
+<!--        SELECT doc_id,-->
+<!--        file_name,-->
+<!--        metadata_list-->
+<!--        FROM DocumentTag-->
+<!--    </select>-->
+    <select id="selectSimpleInfo" resultMap="DocumentTagSimpleMap">
         SELECT doc_id,
         file_name,
         metadata_list
         FROM DocumentTag
     </select>
+
+    <resultMap id="DocumentTagSimpleMap"
+               type="com.springsciyon.business.rag.entity.DocumentTagEntity">
+        <id column="doc_id" property="docId"/>
+        <result column="file_name" property="fileName"/>
+        <result column="metadata_list" property="metadataList"
+                typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
+    </resultMap>
 
     <!-- 插入或更新（ON DUPLICATE KEY UPDATE） -->
     <insert id="insertOrUpdate"

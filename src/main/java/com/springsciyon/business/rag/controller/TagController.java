@@ -1,6 +1,7 @@
 package com.springsciyon.business.rag.controller;
 
 import com.springsciyon.business.rag.dto.ApiResponse;
+import com.springsciyon.business.rag.dto.GetDocIdInfoByCustomDictionary;
 import com.springsciyon.business.rag.dto.TagRequest;
 import com.springsciyon.business.rag.dto.TagResponse;
 import com.springsciyon.business.rag.filterdocid.Tag;
@@ -21,6 +22,10 @@ public class TagController {
 
     @Autowired
     private TagService tagService;
+
+    @Autowired
+    private GetDocIdInfoByCustomDictionary getDocIdInfoByCustomDictionary;
+
 
     /**
      * 添加或更新标签
@@ -197,5 +202,11 @@ public class TagController {
     @GetMapping("/health")
     public ApiResponse<String> health() {
         return ApiResponse.success("Tag API 服务正常运行");
+    }
+
+    @GetMapping("/test")
+    public void test(String query) throws Exception {
+        query = query.toLowerCase().trim();
+        System.out.println(getDocIdInfoByCustomDictionary.extractMetricTerms(query));;
     }
 }

@@ -113,7 +113,6 @@ public class GetDocIdInfoByCustomDictionary {
      */
     private  Keymapper loadCustomWordsFromDatabase() {
         try {
-            TagService tagService = new TagService(); // 创建 TagService 实例,用于main测试
             String mysqlVersion = tagService.getMysqlVersion();
             String redisVersion = RedisUtil.get("documentTag:version");
             List<DocumentSimpleInfo> docInfoList;
@@ -188,21 +187,21 @@ public class GetDocIdInfoByCustomDictionary {
         return text != null ? text.toLowerCase() : null;
     }
     // 保留 main 用于测试
-    public static  void main(String[] args) throws Exception {
-        String text = "PLC文档和sc235aw产品手册的电源要求是什么？";
-        String lowerText = convertToLowerCase(text);
-        GetDocIdInfoByCustomDictionary loadCustomDictionary = new GetDocIdInfoByCustomDictionary();
-        List<DocumentSimpleInfo> matchedDocIds =loadCustomDictionary.extractMetricTerms(lowerText);
-
-        System.out.println("\n=== 在数据库指标词典中成功命中的文档id和文档名称 ===");
-        if (matchedDocIds.isEmpty()) {
-            System.out.println("（无匹配项）");
-        } else {
-            matchedDocIds.forEach(term ->
-                    System.out.println( "  (docIds=" + term.getDocId() + ", fileName=" + term.getFileName() +
-                            ", metadata=" + term.getMetadataList() + ")")
-            );
-        }
-        System.out.println("--------------------------------");
-    }
+//    public static  void main(String[] args) throws Exception {
+//        String text = "PLC文档和sc235aw产品手册的电源要求是什么？";
+//        String lowerText = convertToLowerCase(text);
+//        GetDocIdInfoByCustomDictionary loadCustomDictionary = new GetDocIdInfoByCustomDictionary();
+//        List<DocumentSimpleInfo> matchedDocIds =loadCustomDictionary.extractMetricTerms(lowerText);
+//
+//        System.out.println("\n=== 在数据库指标词典中成功命中的文档id和文档名称 ===");
+//        if (matchedDocIds.isEmpty()) {
+//            System.out.println("（无匹配项）");
+//        } else {
+//            matchedDocIds.forEach(term ->
+//                    System.out.println( "  (docIds=" + term.getDocId() + ", fileName=" + term.getFileName() +
+//                            ", metadata=" + term.getMetadataList() + ")")
+//            );
+//        }
+//        System.out.println("--------------------------------");
+//    }
 }

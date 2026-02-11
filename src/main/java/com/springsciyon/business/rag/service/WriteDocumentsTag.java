@@ -60,7 +60,7 @@ public class WriteDocumentsTag {
             if (exist == null) {
                 // 2️⃣ 不存在 → insert
                 documentTagMapper.insert(tag);
-                System.out.println("成功保存 " + tag.getDocId() + " 的数据");
+                System.out.println("成功保存 文档id信息为" + tag.getDocId() + " 的数据");
             } else {
                 // 3️⃣ 已存在 → update by doc_id
                 tag.setUpdateTime(LocalDateTime.now());
