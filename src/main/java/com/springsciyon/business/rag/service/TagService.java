@@ -1,5 +1,6 @@
 package com.springsciyon.business.rag.service;
 
+import com.springsciyon.business.rag.dao.DocumentTagMapper;
 import com.springsciyon.business.rag.dto.TagRequest;
 import com.springsciyon.business.rag.entity.DocumentTagEntity;
 import com.springsciyon.business.rag.filterdocid.Tag;
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 标签服务层
@@ -20,6 +22,13 @@ public class TagService {
     @Autowired
     private  WriteDocumentsTag writeDocumentsTag;
 
+    @Autowired
+    private  DocumentTagMapper documentTagMapper;
+
+    public String getMysqlVersion() {
+        Map<String, Object> map = documentTagMapper.selectCountAndMaxTime();
+        return map.get("c") + "_" + map.get("t");
+    }
     /**
      * 添加标签
      * @param request 标签请求对象
@@ -62,7 +71,7 @@ public class TagService {
             List<DocumentTagEntity> entities = new ArrayList<>();
             entities.add(entity);
 
-            // 4️⃣ 现在类型匹配了 ✅
+            // 4️⃣ 现在类型匹配了
             writeDocumentsTag.saveOrUpdateTags(entities);
 
             return true;

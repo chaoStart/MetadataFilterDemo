@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springsciyon.business.rag.dao.DocumentTagMapper;
-import com.springsciyon.business.rag.dto.SqlConnect;
 import com.springsciyon.business.rag.entity.DocumentTagEntity;
 import com.springsciyon.business.rag.filterdocid.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,7 +106,6 @@ public class WriteDocumentsTag {
                 Wrappers.lambdaQuery(DocumentTagEntity.class)
                         .eq(DocumentTagEntity::getDocId, docId)
         );
-
         if (entity == null) {
             return null;
         }
@@ -156,42 +154,27 @@ public class WriteDocumentsTag {
      * 写入数据库
      */
     public void saveTagsToDatabase(List<Tag> tags) {
-        // 修改 SQL：加入 metadata_list 字段
-        String sql = "INSERT INTO DocumentTag (doc_id, file_name, author, date_time, metadata_list) " +
-                "VALUES (?, ?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE " +
-                "file_name = VALUES(file_name), " +
-                "author = VALUES(author), " +
-                "date_time = VALUES(date_time), " +
-                "metadata_list = VALUES(metadata_list)";
+        for (Tag tag : tags) {
+            DocumentTagEntity entity = new DocumentTagEntity();
+            entity.setDocId(tag.getDocId());
+            entity.setFileName(tag.getFileName());
+            entity.setAuthor(tag.getAuthor());
 
-        try (Connection conn = SqlConnect.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            for (Tag tag : tags) {
-                ps.setString(1, tag.getDocId());
-                ps.setString(2, tag.getFileName());
-                ps.setString(3, tag.getAuthor());
-
-                // 处理 date_time：允许为 null
-                if (tag.getDateTime() != null && !tag.getDateTime().trim().isEmpty()) {
-                    ps.setTimestamp(4, Timestamp.valueOf(tag.getDateTime()));
-                } else {
-                    ps.setNull(4, java.sql.Types.TIMESTAMP);
-                }
-
-                // 处理 metadata_list：转换为 JSON 字符串
-                String metadataJson = toJsonArray(tag.getMetadataList());
-                ps.setString(5, metadataJson); // MySQL JSON 类型接受合法 JSON 字符串
-
-                ps.addBatch();
+            // String → LocalDateTime
+            if (tag.getDateTime() != null && !tag.getDateTime().isEmpty()) {
+                entity.setDateTime(
+                        LocalDateTime.parse(
+                                tag.getDateTime(),
+                                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                        )
+                );
+            } else {
+                entity.setDateTime(null);
             }
-
-            ps.executeBatch();
-            System.out.println(String.format("数据已成功写入 %d 条数据到 DocumentTag 表", tags.size()));
-
-        } catch (Exception e) {
-            e.printStackTrace();
+            entity.setMetadataList(tag.getMetadataList());
+            // 关键：一条语句完成 插入 or 更新
+            documentTagMapper.insertOrUpdate(entity);
         }
+        System.out.println("数据已成功写入 " + tags.size() + " 条数据到 DocumentTag 表");
     }
 }

@@ -3,16 +3,22 @@ package com.springsciyon.business.rag.dto;
 import com.hankcs.hanlp.dictionary.CustomDictionary;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.springsciyon.business.rag.dao.DocumentTagMapper;
+import com.springsciyon.business.rag.entity.DocumentTagEntity;
 import com.springsciyon.business.rag.filterdocid.DocumentSimpleInfo;
-import java.sql.*;
+import org.springframework.beans.factory.annotation.Autowired;
+
 import java.util.*;
+import com.springsciyon.business.rag.service.TagService;
+import org.springframework.stereotype.Service;
 
-import static com.springsciyon.business.rag.dto.SqlConnect.getMysqlVersion;
-
-
+@Service
 public class GetDocIdInfoByCustomDictionary {
 
-    private static Keymapper cachedKeymapper;
+    private  Keymapper cachedKeymapper;
+
+    @Autowired
+    private  TagService tagService;
 
     // Redis Hash key 用于存储 MetaData_List_Hash -> DocumentSimpleInfo 映射
     private static final String MetaData_List_Hash = "documentTag:metadataListHash";
@@ -20,42 +26,28 @@ public class GetDocIdInfoByCustomDictionary {
     /**
      * 从 DocumentTag 表中读取 doc_id 、 file_name和 metadata_list
      */
-    public static List<DocumentSimpleInfo> readDocIdAndFileNameFromDB() {
+    @Autowired
+    private  DocumentTagMapper documentTagMapper;
+
+    public   List<DocumentSimpleInfo> readDocIdAndFileNameFromDB() {
         List<DocumentSimpleInfo> resultList = new ArrayList<>();
-        String sql = "SELECT doc_id, file_name, metadata_list FROM DocumentTag";
 
-        // 推荐：复用 ObjectMapper（可设为静态字段）
-        ObjectMapper objectMapper = new ObjectMapper();
+        // 直接用 MyBatis-Plus 查
+        List<DocumentTagEntity> entityList = documentTagMapper.selectSimpleInfo();
 
-        try (Connection conn = SqlConnect.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-
-            while (rs.next()) {
-                String docId = rs.getString("doc_id");
-                String fileName = rs.getString("file_name");
-                String metadataJson = rs.getString("metadata_list"); // ← JSON 字符串
-
-                // 解析 JSON 字符串为 List<String>
-                List<String> metadataList = null;
-                if (metadataJson != null && !metadataJson.trim().isEmpty()) {
-                    try {
-                        metadataList = objectMapper.readValue(metadataJson, new TypeReference<List<String>>() {});
-                    } catch (Exception e) {
-                        System.err.println("解析 metadata_list 失败，doc_id=" + docId + ", json=" + metadataJson);
-                        metadataList = Collections.emptyList(); // 或保留 null，根据业务需求
-                    }
-                    resultList.add(new DocumentSimpleInfo(docId, fileName, metadataList));
-                } else {
-//                    metadataList = Collections.emptyList(); // 或 null
-                    continue;
-                }
-
+        for (DocumentTagEntity entity : entityList) {
+            // metadata_list 已经自动反序列化成 List<String>
+            List<String> metadataList = entity.getMetadataList();
+            if (metadataList == null || metadataList.isEmpty()) {
+                continue; // 和你原逻辑保持一致
             }
-        } catch (SQLException e) {
-            System.err.println("数据库读取失败: " + e.getMessage());
-            e.printStackTrace();
-            return null;
+            resultList.add(
+                    new DocumentSimpleInfo(
+                            entity.getDocId(),
+                            entity.getFileName(),
+                            metadataList
+                    )
+            );
         }
         return resultList;
     }
@@ -65,7 +57,7 @@ public class GetDocIdInfoByCustomDictionary {
      * 改进版：支持一对多映射，使用 Redis HMGET 查询并按 docId 去重
      */
     // 根据用户问题question进行hanlp提取关键词并匹配到DocumentSimpleInfo
-    public static List<DocumentSimpleInfo> extractMetricTerms(String question) throws Exception {
+    public  List<DocumentSimpleInfo> extractMetricTerms(String question) throws Exception {
         if (question == null || question.trim().isEmpty()) {
             return Collections.emptyList();
         }
@@ -112,7 +104,6 @@ public class GetDocIdInfoByCustomDictionary {
                 }
             }
         }
-
         return new ArrayList<>(docIdToInfoMap.values());
     }
 
@@ -120,9 +111,10 @@ public class GetDocIdInfoByCustomDictionary {
      * 从数据库加载自定义词典
      * 改进版：构建 术语 -> List<DocumentSimpleInfo> 的映射并存储到 Redis Hash
      */
-    private static Keymapper loadCustomWordsFromDatabase() {
+    private  Keymapper loadCustomWordsFromDatabase() {
         try {
-            String mysqlVersion = getMysqlVersion();
+            TagService tagService = new TagService(); // 创建 TagService 实例,用于main测试
+            String mysqlVersion = tagService.getMysqlVersion();
             String redisVersion = RedisUtil.get("documentTag:version");
             List<DocumentSimpleInfo> docInfoList;
             Set<String> customWords = new HashSet<>(); // ← 用于收集所有去重的自定义词（ metadata 标签）
@@ -196,10 +188,11 @@ public class GetDocIdInfoByCustomDictionary {
         return text != null ? text.toLowerCase() : null;
     }
     // 保留 main 用于测试
-    public static void main(String[] args) throws Exception {
+    public static  void main(String[] args) throws Exception {
         String text = "PLC文档和sc235aw产品手册的电源要求是什么？";
         String lowerText = convertToLowerCase(text);
-        List<DocumentSimpleInfo> matchedDocIds = extractMetricTerms(lowerText);
+        GetDocIdInfoByCustomDictionary loadCustomDictionary = new GetDocIdInfoByCustomDictionary();
+        List<DocumentSimpleInfo> matchedDocIds =loadCustomDictionary.extractMetricTerms(lowerText);
 
         System.out.println("\n=== 在数据库指标词典中成功命中的文档id和文档名称 ===");
         if (matchedDocIds.isEmpty()) {

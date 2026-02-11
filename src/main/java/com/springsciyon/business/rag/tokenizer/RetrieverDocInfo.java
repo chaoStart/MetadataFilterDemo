@@ -1,13 +1,12 @@
 package com.springsciyon.business.rag.tokenizer;
 
+import com.springsciyon.business.rag.dto.GetDocIdInfoByCustomDictionary;
 import com.springsciyon.business.rag.filterdocid.DocumentSimpleInfo;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import static com.springsciyon.business.rag.dto.GetDefaultSqlDictionary.extractMetricTerms;
 
 public class RetrieverDocInfo {
 
@@ -18,11 +17,13 @@ public class RetrieverDocInfo {
         //2. 初始化实例
         Dealer  init_search_module = new Dealer(es);
 
+         GetDocIdInfoByCustomDictionary extractMetricTerms = new GetDocIdInfoByCustomDictionary();
+
         //3. 定义测试字符串
 //        String question = "科远table智慧";
         String question = "sc231Ew和SC8000-sc231aw产品手册的电源要求是什么？";
 //        String question = "科远智慧和天龙集团是两个专业公司的名称";
-        List<DocumentSimpleInfo> matchedDocInfo = extractMetricTerms(question.toLowerCase());
+        List<DocumentSimpleInfo> matchedDocInfo = extractMetricTerms.extractMetricTerms(question.toLowerCase());
         List<String> docIds = new ArrayList<>();
         for (DocumentSimpleInfo matchedDocInfo1 : matchedDocInfo){
             docIds.add(matchedDocInfo1.getDocId());
