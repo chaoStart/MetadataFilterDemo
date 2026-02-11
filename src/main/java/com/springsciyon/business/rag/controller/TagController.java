@@ -23,7 +23,7 @@ public class TagController {
     private TagService tagService;
 
     /**
-     * 添加单个标签
+     * 添加或更新标签
      * POST /api/tags/add
      *
      * 请求体示例：
@@ -38,10 +38,10 @@ public class TagController {
      * @param request 标签请求对象
      * @return 统一响应格式
      */
-    @PostMapping("/add")
-    public ApiResponse<String> addTag(@RequestBody TagRequest request) {
+    @PostMapping("/saveOrUpdateTags")
+    public ApiResponse<String> saveOrUpdateTags(@RequestBody TagRequest request) {
         try {
-            boolean success = tagService.addTag(request);
+            boolean success = tagService.saveOrUpdateTags(request);
             if (success) {
                 return ApiResponse.success("标签添加成功");
             } else {
@@ -53,48 +53,6 @@ public class TagController {
             return ApiResponse.error(500, "服务器错误: " + e.getMessage());
         }
     }
-
-    /**
-     * 批量添加标签
-     * POST /api/tags/batch-add
-     *
-     * 请求体示例：
-     * [
-     *   {
-     *     "doc_id": "756063966790811660",
-     *     "metadataList": ["sc235aw", "235aw产品手册"],
-     *     "filename": "235aw.pdf",
-     *     "author": "研发部",
-     *     "dateTime": "2025-01-10 10:30:00"
-     *   },
-     *   {
-     *     "doc_id": "756063966790811661",
-     *     "metadataList": ["sc236aw", "236aw产品手册"],
-     *     "filename": "236aw.pdf",
-     *     "author": "研发部",
-     *     "dateTime": "2025-01-11 10:30:00"
-     *   }
-     * ]
-     *
-     * @param requests 标签请求列表
-     * @return 统一响应格式
-     */
-    @PostMapping("/batch-add")
-    public ApiResponse<String> addTags(@RequestBody List<TagRequest> requests) {
-        try {
-            boolean success = tagService.addTags(requests);
-            if (success) {
-                return ApiResponse.success("批量添加标签成功，共 " + requests.size() + " 条");
-            } else {
-                return ApiResponse.error("批量添加标签失败");
-            }
-        } catch (IllegalArgumentException e) {
-            return ApiResponse.error(400, e.getMessage());
-        } catch (Exception e) {
-            return ApiResponse.error(500, "服务器错误: " + e.getMessage());
-        }
-    }
-
     /**
      * 删除单个标签
      * DELETE /api/tags/delete/{docId}
@@ -230,39 +188,6 @@ public class TagController {
             return ApiResponse.error(500, "服务器错误: " + e.getMessage());
         }
     }
-
-    /**
-     * 更新标签
-     * PUT /api/tags/update
-     *
-     * 请求体示例：
-     * {
-     *   "doc_id": "756063966790811660",
-     *   "metadataList": ["sc235Aw", "231AW产品手册", "NT6000文档"],
-     *   "filename": "sc235AW产品手册.pdf",
-     *   "author": "研发管理部门",
-     *   "dateTime": "2025-02-01 00:00:00"
-     * }
-     *
-     * @param request 标签请求对象
-     * @return 统一响应格式
-     */
-    @PutMapping("/update")
-    public ApiResponse<String> updateTag(@RequestBody TagRequest request) {
-        try {
-            boolean success = tagService.updateTag(request);
-            if (success) {
-                return ApiResponse.success("标签更新成功");
-            } else {
-                return ApiResponse.error("标签更新失败");
-            }
-        } catch (IllegalArgumentException e) {
-            return ApiResponse.error(400, e.getMessage());
-        } catch (Exception e) {
-            return ApiResponse.error(500, "服务器错误: " + e.getMessage());
-        }
-    }
-
     /**
      * 健康检查接口
      * GET /api/tags/health

@@ -7,23 +7,25 @@ import java.util.List;
  * 用于接收前端传递的标签数据
  */
 public class TagRequest {
-    private String docId;           // 文档ID
-    private List<String> metadataList;  // 元数据列表
     private String id;              // ID（可选）
+    private String docId;           // 文档ID
     private String filename;        // 文件名（可选）
     private String author;          // 作者（可选）
     private String dateTime;        // 日期时间（可选）
+    private String updateTime;      // 更新时间（可选）
+    private List<String> metadataList;  // 元数据列表
 
     public TagRequest() {
     }
 
-    public TagRequest(String docId, List<String> metadataList, String id, String filename, String author, String dateTime) {
+    public TagRequest(String docId,String filename,String author,String dateTime, String updateTime,List<String> metadataList,String id) {
         this.docId = docId;
-        this.metadataList = metadataList;
-        this.id = id;
         this.filename = filename;
         this.author = author;
         this.dateTime = dateTime;
+        this.updateTime = updateTime;
+        this.metadataList = metadataList;
+        this.id = id;
     }
 
     public String getDocId() {
@@ -74,15 +76,24 @@ public class TagRequest {
         this.dateTime = dateTime;
     }
 
+    public String getUpdateTime() {
+        return updateTime;
+    }
+
+    public void setUpdateTime(String updateTime) {
+        this.updateTime = updateTime;
+    }
+
     @Override
     public String toString() {
         return "TagRequest{" +
-                "docId='" + docId + '\'' +
-                ", metadataList=" + metadataList +
                 ", id='" + id + '\'' +
+                "docId='" + docId + '\'' +
                 ", filename='" + filename + '\'' +
                 ", author='" + author + '\'' +
                 ", dateTime='" + dateTime + '\'' +
+                ", updateTime='" + updateTime + '\'' +
+                ", metadataList=" + metadataList +
                 '}';
     }
 }

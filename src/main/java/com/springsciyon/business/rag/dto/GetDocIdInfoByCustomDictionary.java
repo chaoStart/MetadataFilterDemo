@@ -10,7 +10,7 @@ import java.util.*;
 import static com.springsciyon.business.rag.dto.SqlConnect.getMysqlVersion;
 
 
-public class GetDefaultSqlDictionary {
+public class GetDocIdInfoByCustomDictionary {
 
     private static Keymapper cachedKeymapper;
 

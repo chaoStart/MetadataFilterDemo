@@ -1,5 +1,6 @@
 package com.springsciyon.business.rag;
 
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -7,6 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * Spring Boot 应用主类
  */
 @SpringBootApplication
+@MapperScan("com.springsciyon.business.rag.dao")
 public class Application {
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);

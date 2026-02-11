@@ -1,10 +1,13 @@
 package com.springsciyon.business.rag.service;
 
 import com.springsciyon.business.rag.dto.TagRequest;
+import com.springsciyon.business.rag.entity.DocumentTagEntity;
 import com.springsciyon.business.rag.filterdocid.Tag;
-import com.springsciyon.business.rag.filterdocid.WriteDocumentsTag;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,81 +17,60 @@ import java.util.List;
  */
 @Service
 public class TagService {
-
-    private final WriteDocumentsTag writeDocumentsTag;
-
-    public TagService() {
-        this.writeDocumentsTag = new WriteDocumentsTag();
-    }
+    @Autowired
+    private  WriteDocumentsTag writeDocumentsTag;
 
     /**
      * 添加标签
      * @param request 标签请求对象
      * @return 是否成功
      */
-    public boolean addTag(TagRequest request) {
+    public boolean saveOrUpdateTags(TagRequest request) {
         try {
             // 验证必填字段
             if (request.getDocId() == null || request.getDocId().trim().isEmpty()) {
                 throw new IllegalArgumentException("doc_id 不能为空");
             }
 
-            // 创建 Tag 对象
+            // 1️⃣ 先构造 Tag（如果你业务里还需要 Tag）
             Tag tag = new Tag(
-                    request.getAuthor() != null ? request.getAuthor() : "",
-                    request.getFilename() != null ? request.getFilename() : "",
-                    request.getDateTime() != null ? request.getDateTime() : "",
                     request.getDocId(),
+                    request.getFilename() != null ? request.getFilename() : "",
+                    request.getAuthor() != null ? request.getAuthor() : "",
+                    request.getDateTime() != null ? request.getDateTime() : "",
+                    request.getUpdateTime() != null ? request.getUpdateTime() : "",
                     request.getMetadataList()
             );
 
-            // 调用 WriteDocumentsTag 的 addTag 方法
-            List<Tag> tags = new ArrayList<>();
-            tags.add(tag);
-            writeDocumentsTag.addTag(tags);
+            // 2️⃣ 把 Tag 转成 DocumentTagEntity（关键）
+            DocumentTagEntity entity = new DocumentTagEntity();
+            entity.setDocId(tag.getDocId());
+            entity.setAuthor(tag.getAuthor());
+            entity.setFileName(tag.getFileName());
 
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("添加标签失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 批量添加标签
-     * @param requests 标签请求列表
-     * @return 是否成功
-     */
-    public boolean addTags(List<TagRequest> requests) {
-        try {
-            if (requests == null || requests.isEmpty()) {
-                throw new IllegalArgumentException("标签列表不能为空");
-            }
-
-            List<Tag> tags = new ArrayList<>();
-            for (TagRequest request : requests) {
-                if (request.getDocId() == null || request.getDocId().trim().isEmpty()) {
-                    throw new IllegalArgumentException("doc_id 不能为空");
-                }
-
-                Tag tag = new Tag(
-                        request.getAuthor() != null ? request.getAuthor() : "",
-                        request.getFilename() != null ? request.getFilename() : "",
-                        request.getDateTime() != null ? request.getDateTime() : "",
-                        request.getDocId(),
-                        request.getMetadataList()
+            // String -> LocalDateTime
+            if (tag.getDateTime() != null && !tag.getDateTime().isEmpty()) {
+                entity.setDateTime(
+                        LocalDateTime.parse(tag.getDateTime(),
+                                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                 );
-                tags.add(tag);
             }
 
-            writeDocumentsTag.addTag(tags);
+            entity.setMetadataList(tag.getMetadataList());
+
+            // 3️⃣ 构造 List<DocumentTagEntity>
+            List<DocumentTagEntity> entities = new ArrayList<>();
+            entities.add(entity);
+
+            // 4️⃣ 现在类型匹配了 ✅
+            writeDocumentsTag.saveOrUpdateTags(entities);
+
             return true;
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RuntimeException("批量添加标签失败: " + e.getMessage());
+            return false;
         }
     }
-
     /**
      * 删除标��
      * @param docId 文档ID
@@ -101,7 +83,7 @@ public class TagService {
             }
 
             // 创建一个包含 docId 的 Tag 对象用于删除
-            Tag tag = new Tag("", "", "", docId, null);
+            Tag tag = new Tag(docId, "", "",null , null);
             List<Tag> tags = new ArrayList<>();
             tags.add(tag);
 
@@ -112,7 +94,6 @@ public class TagService {
             throw new RuntimeException("删除标签失败: " + e.getMessage());
         }
     }
-
     /**
      * 批量删除标签
      * @param docIds 文档ID列表
@@ -159,36 +140,6 @@ public class TagService {
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("查询标签失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 更新标签
-     * @param request 标签请求对象
-     * @return 是否成功
-     */
-    public boolean updateTag(TagRequest request) {
-        try {
-            if (request.getDocId() == null || request.getDocId().trim().isEmpty()) {
-                throw new IllegalArgumentException("doc_id 不能为空");
-            }
-
-            Tag tag = new Tag(
-                    request.getAuthor() != null ? request.getAuthor() : "",
-                    request.getFilename() != null ? request.getFilename() : "",
-                    request.getDateTime() != null ? request.getDateTime() : "",
-                    request.getDocId(),
-                    request.getMetadataList()
-            );
-
-            List<Tag> tags = new ArrayList<>();
-            tags.add(tag);
-            writeDocumentsTag.updateTag(tags);
-
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("更新标签失败: " + e.getMessage());
         }
     }
 }
